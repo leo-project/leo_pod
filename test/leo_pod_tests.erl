@@ -71,7 +71,7 @@ suite_(_) ->
 
     {ok, State3} = leo_pod_manager:status(MgrId),
     State3Len = length(State3),
-    ?assertEqual(State3Len, (PodSize - 1)),
+    ?assertEqual(State3Len, PodSize),
 
     %% Execute-2 - [checkout > exec > checkin]
     ok = execute_2(10, PodName, echo_2),
