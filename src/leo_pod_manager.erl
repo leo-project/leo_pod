@@ -136,11 +136,19 @@ handle_cast(_, State) ->
 %%                                       {noreply, State, Timeout} |
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
-handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_pids = ChildPids} = State) ->
+handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod  = WorkerMod,
+                                                            worker_args = WorkerArgs,
+                                                            worker_pids = ChildPids} = State) ->
     true = erlang:demonitor(MonitorRef),
     ChildPids1 = queue:to_list(ChildPids),
     ChildPids2 = lists:delete(Pid, ChildPids1),
-    {noreply, State#state{worker_pids = queue:from_list(ChildPids2)}};
+    ChildPids3 = case start_child(WorkerMod, WorkerArgs) of
+                     {ok, ChildPid} ->
+                         queue:from_list([ChildPid|ChildPids2]);
+                     _ ->
+                         queue:from_list(ChildPids2)
+                 end,
+    {noreply, State#state{worker_pids = ChildPids3}};
 
 handle_info(_Info, State) ->
     {noreply, State}.

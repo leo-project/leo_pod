@@ -14,10 +14,10 @@
                    {port, 8080}],
     leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs),
 
-    %% Execute - checkout > call > checkin
+    %% Execute - [checkout > call > checkin]
     {ok, Worker} = leo_pod:checkout(PodName),
-    {ok, Reply}  = gen_server:call(Worker, {Fun, <<"Hello Hal,">>}),
-    ok = leo_pod:checkin(Name, Worker),
+    {ok, _Reply} = gen_server:call(Worker, {Fun, <<"Hello Hal,">>}),
+    ok = leo_pod:checkin(PodName, Worker),
     ok.
 
 ```
