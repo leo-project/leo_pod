@@ -59,7 +59,7 @@ suite_(_) ->
     ?assertEqual(PodSize, State1Len),
 
     %% Execute-1 - [checkout > exec > checkin]
-    ok = execute_1(16, PodName, echo_1),
+    ok = execute_1(10000, PodName, echo_1),
 
     {ok, State2} = leo_pod_manager:status(MgrId),
     State2Len = length(State2),

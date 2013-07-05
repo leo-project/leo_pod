@@ -49,7 +49,7 @@
                 max_overflow = 0    :: pos_integer(),
                 worker_mod          :: atom(),
                 worker_args = []    :: list(tuple()),
-                worker_pids = []    :: queue()
+                worker_pids = []    :: list()
                }).
 
 
@@ -85,7 +85,7 @@ status(Id) ->
 %% Description: Initiates the server
 init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs]) ->
     {ok, Children} =
-        start_child(NumOfChildren, WorkerMod, WorkerArgs, queue:new()),
+        start_child(NumOfChildren, WorkerMod, WorkerArgs, []),
     {ok, #state{num_of_children = NumOfChildren,
                 max_overflow    = MaxOverflow,
                 worker_mod      = WorkerMod,
@@ -100,28 +100,32 @@ handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
                                     worker_pids  = Children,
                                     max_overflow = MaxOverflow} = State) ->
     {Res, NewState} =
-        case queue:out(Children) of
-            {{value, WorkerPid}, NewChildren} ->
-                {{ok, WorkerPid}, State#state{worker_pids = NewChildren}};
-            {empty, Children} when MaxOverflow > 0 ->
-                case start_child(WorkerMod, WorkerArgs) of
-                    {ok, ChildPid} ->
-                        {{ok, ChildPid}, State#state{max_overflow = MaxOverflow - 1}};
-                    {error, _Cause} ->
+        case Children of
+            [] ->
+                case MaxOverflow > 0 of
+                    true ->
+                        case start_child(WorkerMod, WorkerArgs) of
+                            {ok, ChildPid} ->
+                                {{ok, ChildPid},
+                                 State#state{max_overflow = MaxOverflow - 1}};
+                            {error, _Cause} ->
+                                {{error, empty}, State}
+                        end;
+                    false ->
                         {{error, empty}, State}
                 end;
-            {empty, Children} ->
-                {{error, empty}, State}
+            _ ->
+                [WorkerPid|NewChildren] = Children,
+                {{ok, WorkerPid}, State#state{worker_pids = NewChildren}}
         end,
     {reply, Res, NewState};
 
 handle_call({checkin, WorkerPid}, _From, #state{worker_pids = Children} = State) ->
-    NewChildren = queue:in(WorkerPid, Children),
+    NewChildren = [WorkerPid|Children],
     {reply, ok, State#state{worker_pids = NewChildren}};
 
 handle_call(status, _From, State) ->
-    WorkerPids = queue:to_list(State#state.worker_pids),
-    {reply, {ok, WorkerPids}, State}.
+    {reply, {ok, State#state.worker_pids}, State}.
 
 
 %% Function: handle_cast(Msg, State) -> {noreply, State}          |
@@ -140,15 +144,15 @@ handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod  = Worker
                                                             worker_args = WorkerArgs,
                                                             worker_pids = ChildPids} = State) ->
     true = erlang:demonitor(MonitorRef),
-    ChildPids1 = queue:to_list(ChildPids),
-    ChildPids2 = lists:delete(Pid, ChildPids1),
-    ChildPids3 = case start_child(WorkerMod, WorkerArgs) of
+
+    ChildPids1 = lists:delete(Pid, ChildPids),
+    ChildPids2 = case start_child(WorkerMod, WorkerArgs) of
                      {ok, ChildPid} ->
-                         queue:from_list([ChildPid|ChildPids2]);
+                         [ChildPid|ChildPids1];
                      _ ->
-                         queue:from_list(ChildPids2)
+                         ChildPids1
                  end,
-    {noreply, State#state{worker_pids = ChildPids3}};
+    {noreply, State#state{worker_pids = ChildPids2}};
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -188,14 +192,14 @@ start_child(WorkerMod, WorkerArgs) ->
             {error, Cause}
     end.
 
--spec(start_child(integer(), atom(), list(any()), queue()) ->
+-spec(start_child(integer(), atom(), list(any()), list(pid())) ->
              {ok, pid()} | {error, any()}).
 start_child(0,_,_,Children) ->
     {ok, Children};
 start_child(Index, WorkerMod, WorkerArgs, Children) ->
     case start_child(WorkerMod, WorkerArgs) of
         {ok, ChildPid} ->
-            Children1 = queue:in(ChildPid, Children),
+            Children1 = [ChildPid|Children],
             start_child(Index - 1, WorkerMod, WorkerArgs, Children1);
         {error, Cause} ->
             {error, Cause}
