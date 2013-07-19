@@ -25,8 +25,6 @@
 
 -behaviour(supervisor).
 
--include("leo_pod.hrl").
-
 %% API
 -export([start_link/0, start_link/5, stop/1]).
 
@@ -41,7 +39,8 @@ start_link() ->
     supervisor:start_link(?MODULE, []).
 
 start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
-    supervisor:start_link({local, Id}, ?MODULE,
+    SupRef = list_to_atom(lists:append([ atom_to_list(Id), "_sup"])),
+    supervisor:start_link({local, SupRef}, ?MODULE,
                           [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs]).
 
 stop(Id) ->
@@ -60,11 +59,9 @@ init([]) ->
     {ok, { {one_for_one, 5, 10}, []} };
 
 init([Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs]) ->
-    ChildId = ?gen_manager_id(Id),
-    %% list_to_atom(lists:append([atom_to_list(Id), "_manager"])),
-    ChildSpec = {ChildId,
+    ChildSpec = {Id,
                  {leo_pod_manager, start_link,
-                  [ChildId, PodSize, MaxOverflow, WorkerMod, WorkerArgs]},
+                  [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs]},
                  permanent,
                  2000,
                  worker,

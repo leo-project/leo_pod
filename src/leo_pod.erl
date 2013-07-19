@@ -23,9 +23,6 @@
 
 -author('Yosuke Hara').
 
--include("leo_pod.hrl").
--include_lib("eunit/include/eunit.hrl").
-
 %% API
 -export([child_spec/5,
          checkout/1,
@@ -44,15 +41,13 @@ child_spec(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
 %% @doc Checkout a worker from the pod_manager
 %%
 checkout(PodName) ->
-    MgrId = ?gen_manager_id(PodName),
-    leo_pod_manager:checkout(MgrId).
+    leo_pod_manager:checkout(PodName).
 
 
 %% @doc Checkin a worker into the pod_manager
 %%
 checkin(PodName, Worker) ->
-    MgrId = ?gen_manager_id(PodName),
-    leo_pod_manager:checkin(MgrId, Worker).
+    leo_pod_manager:checkin(PodName, Worker).
 
 
 %% ===================================================================

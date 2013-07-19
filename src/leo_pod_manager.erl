@@ -25,8 +25,6 @@
 
 -behaviour(gen_server).
 
--include_lib("eunit/include/eunit.hrl").
-
 %% API
 -export([start_link/5,
          stop/1
