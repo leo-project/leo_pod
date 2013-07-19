@@ -25,6 +25,8 @@
 
 -behaviour(gen_server).
 
+-include_lib("eunit/include/eunit.hrl").
+
 %% API
 -export([start_link/5,
          stop/1
@@ -32,6 +34,7 @@
 
 -export([checkout/1,
          checkin/2,
+         checkin_async/2,
          status/1
         ]).
 
@@ -68,6 +71,9 @@ checkout(Id) ->
 
 checkin(Id, WorkerPid) ->
     gen_server:call(Id, {checkin, WorkerPid}).
+
+checkin_async(Id, WorkerPid) ->
+    gen_server:cast(Id, {checkin_async, WorkerPid}).
 
 status(Id) ->
     gen_server:call(Id, status).
@@ -131,6 +137,10 @@ handle_call(status, _From, State) ->
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
+handle_cast({checkin_async, WorkerPid}, #state{worker_pids = Children} = State) ->
+    NewChildren = [WorkerPid|Children],
+    {noreply, State#state{worker_pids = NewChildren}};
+
 handle_cast(_, State) ->
     {noreply, State}.
 

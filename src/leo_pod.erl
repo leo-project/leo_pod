@@ -26,7 +26,9 @@
 %% API
 -export([child_spec/5,
          checkout/1,
-         checkin/2]).
+         checkin/2,
+         checkin_async/2
+        ]).
 
 
 %% ===================================================================
@@ -48,6 +50,9 @@ checkout(PodName) ->
 %%
 checkin(PodName, Worker) ->
     leo_pod_manager:checkin(PodName, Worker).
+
+checkin_async(PodName, Worker) ->
+    leo_pod_manager:checkin_async(PodName, Worker).
 
 
 %% ===================================================================

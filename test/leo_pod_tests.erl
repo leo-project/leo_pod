@@ -116,7 +116,7 @@ execute_1(Index, Name, Fun) ->
     {ok, Msg2} = gen_server:call(Worker, {Fun, Msg1}),
     ?assertEqual(Msg1, Msg2),
 
-    ok = leo_pod:checkin(Name, Worker),
+    ok = leo_pod:checkin_async(Name, Worker),
     execute_1(Index - 1, Name, Fun).
 
 execute_2(0,_Name,_Fun) ->
