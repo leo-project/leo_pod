@@ -95,35 +95,36 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs]) ->
 handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
 
+
+%% @doc Checkout a worker
+handle_call(checkout, _From, #state{worker_pids  = [],
+                                    max_overflow = 0} = State) ->
+    {reply, {error, empty}, State};
+
 handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
                                     worker_args  = WorkerArgs,
-                                    worker_pids  = Children,
+                                    worker_pids  = [],
                                     max_overflow = MaxOverflow} = State) ->
     {Res, NewState} =
-        case Children of
-            [] ->
-                case MaxOverflow > 0 of
-                    true ->
-                        case start_child(WorkerMod, WorkerArgs) of
-                            {ok, ChildPid} ->
-                                {{ok, ChildPid},
-                                 State#state{max_overflow = MaxOverflow - 1}};
-                            {error, _Cause} ->
-                                {{error, empty}, State}
-                        end;
-                    false ->
-                        {{error, empty}, State}
-                end;
-            _ ->
-                [WorkerPid|NewChildren] = Children,
-                {{ok, WorkerPid}, State#state{worker_pids = NewChildren}}
+        case start_child(WorkerMod, WorkerArgs) of
+            {ok, ChildPid} ->
+                {{ok, ChildPid},
+                 State#state{max_overflow = MaxOverflow - 1}};
+            {error, _Cause} ->
+                {{error, empty}, State}
         end,
     {reply, Res, NewState};
 
+handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
+    [WorkerPid|NewChildren] = Children,
+    {reply, {ok, WorkerPid}, State#state{worker_pids = NewChildren}};
+
+%% @doc Checkin a worker
 handle_call({checkin, WorkerPid}, _From, #state{worker_pids = Children} = State) ->
     NewChildren = [WorkerPid|Children],
     {reply, ok, State#state{worker_pids = NewChildren}};
 
+%% @doc Retrieve the current status
 handle_call(status, _From, State) ->
     {reply, {ok, State#state.worker_pids}, State}.
 
