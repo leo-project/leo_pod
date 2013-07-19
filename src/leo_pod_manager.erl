@@ -34,6 +34,7 @@
 
 -export([checkout/1,
          checkin/2,
+         checkin_async/2,
          status/1
         ]).
 
@@ -71,6 +72,9 @@ checkout(Id) ->
 checkin(Id, WorkerPid) ->
     gen_server:call(Id, {checkin, WorkerPid}).
 
+checkin_async(Id, WorkerPid) ->
+    gen_server:cast(Id, {checkin_async, WorkerPid}).
+
 status(Id) ->
     gen_server:call(Id, status).
 
@@ -95,35 +99,36 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs]) ->
 handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
 
+
+%% @doc Checkout a worker
+handle_call(checkout, _From, #state{worker_pids  = [],
+                                    max_overflow = 0} = State) ->
+    {reply, {error, empty}, State};
+
 handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
                                     worker_args  = WorkerArgs,
-                                    worker_pids  = Children,
+                                    worker_pids  = [],
                                     max_overflow = MaxOverflow} = State) ->
     {Res, NewState} =
-        case Children of
-            [] ->
-                case MaxOverflow > 0 of
-                    true ->
-                        case start_child(WorkerMod, WorkerArgs) of
-                            {ok, ChildPid} ->
-                                {{ok, ChildPid},
-                                 State#state{max_overflow = MaxOverflow - 1}};
-                            {error, _Cause} ->
-                                {{error, empty}, State}
-                        end;
-                    false ->
-                        {{error, empty}, State}
-                end;
-            _ ->
-                [WorkerPid|NewChildren] = Children,
-                {{ok, WorkerPid}, State#state{worker_pids = NewChildren}}
+        case start_child(WorkerMod, WorkerArgs) of
+            {ok, ChildPid} ->
+                {{ok, ChildPid},
+                 State#state{max_overflow = MaxOverflow - 1}};
+            {error, _Cause} ->
+                {{error, empty}, State}
         end,
     {reply, Res, NewState};
 
+handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
+    [WorkerPid|NewChildren] = Children,
+    {reply, {ok, WorkerPid}, State#state{worker_pids = NewChildren}};
+
+%% @doc Checkin a worker
 handle_call({checkin, WorkerPid}, _From, #state{worker_pids = Children} = State) ->
     NewChildren = [WorkerPid|Children],
     {reply, ok, State#state{worker_pids = NewChildren}};
 
+%% @doc Retrieve the current status
 handle_call(status, _From, State) ->
     {reply, {ok, State#state.worker_pids}, State}.
 
@@ -132,6 +137,10 @@ handle_call(status, _From, State) ->
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
+handle_cast({checkin_async, WorkerPid}, #state{worker_pids = Children} = State) ->
+    NewChildren = [WorkerPid|Children],
+    {noreply, State#state{worker_pids = NewChildren}};
+
 handle_cast(_, State) ->
     {noreply, State}.
 

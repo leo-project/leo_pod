@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.4.3 (Jul 19, 2013)
+
+* Improve
+    * Performance tuning
+
 
 ## 0.4.2 (Jul 9, 2013)
 
