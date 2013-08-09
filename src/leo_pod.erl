@@ -24,7 +24,7 @@
 -author('Yosuke Hara').
 
 %% API
--export([child_spec/5,
+-export([child_spec/6,
          checkout/1,
          checkin/2,
          checkin_async/2
@@ -36,8 +36,8 @@
 %% ===================================================================
 %% @doc Set child worker's spec and launch a proc
 %%
-child_spec(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
-    leo_pod_sup:start_link(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs).
+child_spec(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+    leo_pod_sup:start_link(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
 
 
 %% @doc Checkout a worker from the pod_manager

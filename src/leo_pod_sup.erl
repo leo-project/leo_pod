@@ -26,7 +26,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_link/5, stop/1]).
+-export([start_link/0, start_link/6, stop/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -38,10 +38,10 @@
 start_link() ->
     supervisor:start_link(?MODULE, []).
 
-start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
+start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     SupRef = list_to_atom(lists:append([ atom_to_list(Id), "_sup"])),
     supervisor:start_link({local, SupRef}, ?MODULE,
-                          [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs]).
+                          [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]).
 
 stop(Id) ->
     case whereis(Id) of
@@ -58,10 +58,10 @@ stop(Id) ->
 init([]) ->
     {ok, { {one_for_one, 5, 10}, []} };
 
-init([Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs]) ->
+init([Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
     ChildSpec = {Id,
                  {leo_pod_manager, start_link,
-                  [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs]},
+                  [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]},
                  permanent,
                  2000,
                  worker,

@@ -28,7 +28,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %% API
--export([start_link/5,
+-export([start_link/6,
          stop/1
         ]).
 
@@ -59,9 +59,9 @@
 %% ===================================================================
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
 %% Description: Starts the server
-start_link(Id, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs) ->
+start_link(Id, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     gen_server:start_link({local, Id}, ?MODULE,
-                          [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs], []).
+                          [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
 
 stop(Id) ->
     gen_server:call(Id, stop, 30000).
@@ -87,7 +87,8 @@ status(Id) ->
 %%                         ignore               |
 %%                         {stop, Reason}
 %% Description: Initiates the server
-init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs]) ->
+init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
+    InitFun(self()),
     {ok, Children} =
         start_child(NumOfChildren, WorkerMod, WorkerArgs, []),
     {ok, #state{num_of_children = NumOfChildren,
