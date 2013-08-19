@@ -88,7 +88,13 @@ status(Id) ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
-    InitFun(self()),
+    case InitFun of
+        undefined ->
+            void;
+        _Fun ->
+            InitFun(self())
+    end,
+
     {ok, Children} =
         start_child(NumOfChildren, WorkerMod, WorkerArgs, []),
     {ok, #state{num_of_children = NumOfChildren,

@@ -26,7 +26,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_link/6, stop/1]).
+-export([start_link/0, start_link/5, start_link/6, stop/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -37,6 +37,9 @@
 %% ===================================================================
 start_link() ->
     supervisor:start_link(?MODULE, []).
+
+start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
+    start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, undefined).
 
 start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     SupRef = list_to_atom(lists:append([ atom_to_list(Id), "_sup"])),
