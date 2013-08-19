@@ -23,7 +23,7 @@
 {application, leo_pod,
  [
   {description, "leo_pod manages and pools worker processes"},
-  {vsn, "0.4.3"},
+  {vsn, "0.4.4"},
   {registered, []},
   {applications, [
                   kernel,

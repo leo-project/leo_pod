@@ -50,7 +50,10 @@ suite_(_) ->
     WorkerArgs  = [{protocol, tcp},
                    {host, "127.0.0.1"},
                    {port, 8080}],
-    leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs),
+    InitFun = fun(_ManagerRef) ->
+            void
+    end,
+    leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs, InitFun),
 
     %% Confirm procs #1
     {ok, State1} = leo_pod_manager:status(PodName),
@@ -88,7 +91,7 @@ suite_(_) ->
     WorkerArgs1  = [{protocol, tcp},
                     {host, "127.0.0.1"},
                     {port, 8080}],
-    leo_pod:child_spec(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1),
+    leo_pod:child_spec(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1, InitFun),
 
     %% Confirm procs #2
     {ok, State5} = leo_pod_manager:status(PodName1),
