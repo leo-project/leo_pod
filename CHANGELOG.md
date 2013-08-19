@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.4.4 (Aug 19, 2013)
+
+* Improve
+    * Able to be executed by set function when satrting/restarting an object of process
+
+
 ## 0.4.3 (Jul 19, 2013)
 
 * Improve
