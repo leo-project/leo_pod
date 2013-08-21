@@ -95,13 +95,16 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
             InitFun(self())
     end,
 
-    {ok, Children} =
-        start_child(NumOfChildren, WorkerMod, WorkerArgs, []),
-    {ok, #state{num_of_children = NumOfChildren,
-                max_overflow    = MaxOverflow,
-                worker_mod      = WorkerMod,
-                worker_args     = WorkerArgs,
-                worker_pids     = Children}}.
+    case start_child(NumOfChildren, WorkerMod, WorkerArgs, []) of
+        {ok, Children} ->
+            {ok, #state{num_of_children = NumOfChildren,
+                        max_overflow    = MaxOverflow,
+                        worker_mod      = WorkerMod,
+                        worker_args     = WorkerArgs,
+                        worker_pids     = Children}};
+        {error, Cause} ->
+            {stop, Cause}
+    end.
 
 handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
