@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.4.5 (Aug 27, 2013)
+
+* Fixed Bugs
+    * Not handling an error when invoked "gen_server:init"
+
 ## 0.4.4 (Aug 19, 2013)
 
 * Improve
