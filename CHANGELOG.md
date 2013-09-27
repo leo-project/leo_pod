@@ -1,31 +1,38 @@
 # CHANGELOG
 
+## 0.4.6 (Sep 27, 2013)
+
+* Improved
+    * Supported Erlang/OTP R16B02
+
+
 ## 0.4.5 (Aug 27, 2013)
 
 * Fixed Bugs
     * Not handling an error when invoked "gen_server:init"
 
+
 ## 0.4.4 (Aug 19, 2013)
 
-* Improve
+* Improved
     * Able to be executed by set function when satrting/restarting an object of process
 
 
 ## 0.4.3 (Jul 19, 2013)
 
-* Improve
+* Improved
     * Performance tuning
 
 
 ## 0.4.2 (Jul 9, 2013)
 
-* Improve
-    * Replace data-type of queue from queue() to list()
+* Improved
+    * Replaced data-type of queue from queue() to list()
 
 
 ## 0.4.1  (Jul 4, 2013)
 
-* Improve
+* Improved
     * Re-launch a child process after downed a process
 
 
