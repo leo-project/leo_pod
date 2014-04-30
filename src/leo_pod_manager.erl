@@ -142,10 +142,10 @@ handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
 handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
                                                 max_overflow = MaxOverflow,
                                                 worker_pids = Children} = State) ->
-    if
-        length(Children) >= NumOfChildren ->
-            {reply, ok, State#state{max_overflow = MaxOverflow + 1}};
+    case length(Children) >= NumOfChildren of 
         true ->
+            {reply, ok, State#state{max_overflow = MaxOverflow + 1}};
+        false ->
             NewChildren = [WorkerPid|Children],
             {reply, ok, State#state{worker_pids = NewChildren}}
     end;
@@ -162,10 +162,10 @@ handle_call(status, _From, State) ->
 handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
                                                max_overflow = MaxOverflow,
                                                worker_pids = Children} = State) ->
-    if
-        length(Children) >= NumOfChildren ->
-            {noreply, State#state{max_overflow = MaxOverflow + 1}};
+    case length(Children) >= NumOfChildren of
         true ->
+            {noreply, State#state{max_overflow = MaxOverflow + 1}};
+        false ->
             NewChildren = [WorkerPid|Children],
             {noreply, State#state{worker_pids = NewChildren}}
     end;
