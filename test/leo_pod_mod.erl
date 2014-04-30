@@ -70,7 +70,7 @@ handle_call({echo_1, Msg},_From, State) ->
     {reply, {ok, Msg}, State};
 
 handle_call({echo_2, Msg},_From, State) ->
-    timer:sleep(100),
+    timer:sleep(300),
     {reply, {ok, Msg}, State}.
 
 

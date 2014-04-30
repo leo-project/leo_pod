@@ -35,7 +35,8 @@
 -export([checkout/1,
          checkin/2,
          checkin_async/2,
-         status/1
+         status/1,
+         pool/1
         ]).
 
 %% gen_server callbacks
@@ -78,6 +79,10 @@ checkin_async(Id, WorkerPid) ->
 status(Id) ->
     gen_server:call(Id, status).
 
+pool(Id) ->
+    {ok, State} = status(Id),
+    {worker_pids, WorkerPids} = lists:keyfind(worker_pids, 1, State),
+    {ok, WorkerPids}.
 
 %% ===================================================================
 %% gen_server callbacks
@@ -134,22 +139,36 @@ handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
     {reply, {ok, WorkerPid}, State#state{worker_pids = NewChildren}};
 
 %% @doc Checkin a worker
-handle_call({checkin, WorkerPid}, _From, #state{worker_pids = Children} = State) ->
-    NewChildren = [WorkerPid|Children],
-    {reply, ok, State#state{worker_pids = NewChildren}};
+handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
+                                                max_overflow = MaxOverflow,
+                                                worker_pids = Children} = State) ->
+    if
+        length(Children) >= NumOfChildren ->
+            {reply, ok, State#state{max_overflow = MaxOverflow + 1}};
+        true ->
+            NewChildren = [WorkerPid|Children],
+            {reply, ok, State#state{worker_pids = NewChildren}}
+    end;
 
 %% @doc Retrieve the current status
 handle_call(status, _From, State) ->
-    {reply, {ok, State#state.worker_pids}, State}.
+    {reply, {ok, lists:zip(record_info(fields, state),tl(tuple_to_list(State)))}, State}.
 
 
 %% Function: handle_cast(Msg, State) -> {noreply, State}          |
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
-handle_cast({checkin_async, WorkerPid}, #state{worker_pids = Children} = State) ->
-    NewChildren = [WorkerPid|Children],
-    {noreply, State#state{worker_pids = NewChildren}};
+handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
+                                               max_overflow = MaxOverflow,
+                                               worker_pids = Children} = State) ->
+    if
+        length(Children) >= NumOfChildren ->
+            {noreply, State#state{max_overflow = MaxOverflow + 1}};
+        true ->
+            NewChildren = [WorkerPid|Children],
+            {noreply, State#state{worker_pids = NewChildren}}
+    end;
 
 handle_cast(_, State) ->
     {noreply, State}.
