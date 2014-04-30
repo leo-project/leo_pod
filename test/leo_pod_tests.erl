@@ -56,32 +56,35 @@ suite_(_) ->
     leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs, InitFun),
 
     %% Confirm procs #1
-    {ok, State1} = leo_pod_manager:status(PodName),
+    {ok, State1} = leo_pod_manager:pool(PodName),
     State1Len = length(State1),
     ?assertEqual(PodSize, State1Len),
 
     %% Execute-1 - [checkout > exec > checkin]
     ok = execute_1(10000, PodName, echo_1),
 
-    {ok, State2} = leo_pod_manager:status(PodName),
+    {ok, State2} = leo_pod_manager:pool(PodName),
     State2Len = length(State2),
-    ?assertEqual(State1Len, State2Len),
+    ?assertEqual(PodSize, State2Len),
 
     %% stop a target child proc
-    {ok, [Pid1|_]} = leo_pod_manager:status(PodName),
+    {ok, [Pid1|_]} = leo_pod_manager:pool(PodName),
     ok = gen_server:call(Pid1, stop),
 
-    {ok, State3} = leo_pod_manager:status(PodName),
+    {ok, State3} = leo_pod_manager:pool(PodName),
     State3Len = length(State3),
-    ?assertEqual(State3Len, PodSize),
+    ?assertEqual(PodSize, State3Len),
 
     %% Execute-2 - [checkout > exec > checkin]
     ok = execute_2(10, PodName, echo_2),
-    timer:sleep(2000),
+    timer:sleep(100),
     {ok, State4} = leo_pod_manager:status(PodName),
-    State4Len = length(State4),
-    ?assertEqual(true, (State4Len > PodSize)),
-
+    {max_overflow, MaxOverflow4} = lists:keyfind(max_overflow, 1, State4),
+    ?assertEqual(true, MaxOverflow4 < MaxOverflow),
+    timer:sleep(300),
+    {ok, State5} = leo_pod_manager:pool(PodName),
+    State5Len = length(State5),
+    ?assertEqual(PodSize, State5Len),
 
     %% Prepare-2
     PodName1 = 'test_worker_pod_1',
@@ -94,16 +97,16 @@ suite_(_) ->
     leo_pod:child_spec(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1, InitFun),
 
     %% Confirm procs #2
-    {ok, State5} = leo_pod_manager:status(PodName1),
-    State5Len = length(State5),
-    ?assertEqual(PodSize1, State5Len),
+    {ok, State6} = leo_pod_manager:pool(PodName1),
+    State6Len = length(State6),
+    ?assertEqual(PodSize1, State6Len),
 
     %% Execute-4 - [checkout > exec > checkin]
     ok = execute_1(16, PodName1, echo_1),
 
-    {ok, State6} = leo_pod_manager:status(PodName1),
-    State6Len = length(State6),
-    ?assertEqual(State5Len, State6Len),
+    {ok, State7} = leo_pod_manager:pool(PodName1),
+    State7Len = length(State7),
+    ?assertEqual(PodSize1, State7Len),
     ok.
 
 
