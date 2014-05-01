@@ -36,7 +36,8 @@
          checkin/2,
          checkin_async/2,
          status/1,
-         pool/1
+         raw_status/1,
+         pool_pids/1
         ]).
 
 %% gen_server callbacks
@@ -47,8 +48,9 @@
          terminate/2,
          code_change/3]).
 
--record(state, {num_of_children = 0 :: pos_integer(),
-                max_overflow = 0    :: pos_integer(),
+-record(state, {num_of_children = 8 :: pos_integer(),
+                max_overflow = 8    :: pos_integer(),
+                num_overflow = 8    :: pos_integer(),
                 worker_mod          :: atom(),
                 worker_args = []    :: list(tuple()),
                 worker_pids = []    :: list()
@@ -79,10 +81,11 @@ checkin_async(Id, WorkerPid) ->
 status(Id) ->
     gen_server:call(Id, status).
 
-pool(Id) ->
-    {ok, State} = status(Id),
-    {worker_pids, WorkerPids} = lists:keyfind(worker_pids, 1, State),
-    {ok, WorkerPids}.
+raw_status(Id) ->
+    gen_server:call(Id, raw_status).
+
+pool_pids(Id) ->
+    gen_server:call(Id, pool_pids).
 
 %% ===================================================================
 %% gen_server callbacks
@@ -104,6 +107,7 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
         {ok, Children} ->
             {ok, #state{num_of_children = NumOfChildren,
                         max_overflow    = MaxOverflow,
+                        num_overflow    = MaxOverflow,
                         worker_mod      = WorkerMod,
                         worker_args     = WorkerArgs,
                         worker_pids     = Children}};
@@ -117,18 +121,18 @@ handle_call(stop,_From,State) ->
 
 %% @doc Checkout a worker
 handle_call(checkout, _From, #state{worker_pids  = [],
-                                    max_overflow = 0} = State) ->
+                                    num_overflow = 0} = State) ->
     {reply, {error, empty}, State};
 
 handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
                                     worker_args  = WorkerArgs,
                                     worker_pids  = [],
-                                    max_overflow = MaxOverflow} = State) ->
+                                    num_overflow = NumOverflow} = State) ->
     {Res, NewState} =
         case start_child(WorkerMod, WorkerArgs) of
             {ok, ChildPid} ->
                 {{ok, ChildPid},
-                 State#state{max_overflow = MaxOverflow - 1}};
+                 State#state{num_overflow = NumOverflow - 1}};
             {error, _Cause} ->
                 {{error, empty}, State}
         end,
@@ -140,31 +144,45 @@ handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
 
 %% @doc Checkin a worker
 handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
-                                                max_overflow = MaxOverflow,
+                                                num_overflow = NumOverflow,
                                                 worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of 
         true ->
-            {reply, ok, State#state{max_overflow = MaxOverflow + 1}};
+            {reply, ok, State#state{num_overflow = NumOverflow + 1}};
         false ->
             NewChildren = [WorkerPid|Children],
             {reply, ok, State#state{worker_pids = NewChildren}}
     end;
 
-%% @doc Retrieve the current status
-handle_call(status, _From, State) ->
-    {reply, {ok, lists:zip(record_info(fields, state),tl(tuple_to_list(State)))}, State}.
+%% @doc Retrieve the current status in pretty format {working_process_count, worker_process_count, overflow_count}
+handle_call(status, _From, #state{num_of_children = NumOfChildren,
+                                      max_overflow = MaxOverflow,
+                                      num_overflow = NumOverflow,
+                                      worker_pids = Children} = State) ->
+    case length(Children) of
+        N when N > 0 ->
+            {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State};
+        0 ->
+            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow, 0, NumOverflow}}, State}
+    end;
 
+%% @doc Retrieve the current raw status
+handle_call(raw_status, _From, State) ->
+    {reply, {ok, lists:zip(record_info(fields, state),tl(tuple_to_list(State)))}, State};
+
+handle_call(pool_pids, _From, #state{worker_pids = Children} = State) ->
+    {reply, {ok, Children}, State}.
 
 %% Function: handle_cast(Msg, State) -> {noreply, State}          |
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
-                                               max_overflow = MaxOverflow,
+                                               num_overflow = NumOverflow,
                                                worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
-            {noreply, State#state{max_overflow = MaxOverflow + 1}};
+            {noreply, State#state{num_overflow = NumOverflow + 1}};
         false ->
             NewChildren = [WorkerPid|Children],
             {noreply, State#state{worker_pids = NewChildren}}
