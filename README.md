@@ -28,6 +28,13 @@ See files under the `test/` directory in the repository.
 
 ```
 
+## Usage in Leo Project
+
+**leo_pod** is used in **leo_rpc** library.
+It is used to mangage the number of process of RPC clients for each node.
+It is necessary because some OS has the limit for the number of file descriptors
+and therefore connections to the other nodes.
+
 ## License
 
 leo_pod's license is "Apache License Version 2.0"
