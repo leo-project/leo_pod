@@ -56,30 +56,26 @@ suite_(_) ->
     leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs, InitFun),
 
     %% Confirm procs #1
-    {ok, {_, WorkerNum1, _}} = leo_pod:status(PodName),
-    ?assertEqual(PodSize, WorkerNum1),
+    ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% Execute-1 - [checkout > exec > checkin]
     ok = execute_1(10000, PodName, echo_1),
 
-    {ok, {_, WorkerNum2, _}} = leo_pod:status(PodName),
-    ?assertEqual(PodSize, WorkerNum2),
+    ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% stop a target child proc
     {ok, [Pid1|_]} = leo_pod_manager:pool_pids(PodName),
     ok = gen_server:call(Pid1, stop),
-
-    {ok, {_, WorkerNum3, _}} = leo_pod:status(PodName),
-    ?assertEqual(PodSize, WorkerNum3),
+    ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% Execute-2 - [checkout > exec > checkin]
     ok = execute_2(10, PodName, echo_2),
     timer:sleep(100),
-    {ok, {_, _, NumOverflow4}} = leo_pod:status(PodName),
+    {ok, {NumWorking, NumStandby, NumOverflow4}} = leo_pod:status(PodName),
+    ?assertEqual({NumWorking, NumStandby}, {10, 0}),
     ?assertEqual(true, NumOverflow4 < MaxOverflow),
     timer:sleep(300),
-    {ok, {_, WorkerNum5, _}} = leo_pod:status(PodName),
-    ?assertEqual(PodSize, WorkerNum5),
+    ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% Prepare-2
     PodName1 = 'test_worker_pod_1',
@@ -92,14 +88,12 @@ suite_(_) ->
     leo_pod:child_spec(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1, InitFun),
 
     %% Confirm procs #2
-    {ok, {_, WorkerNum6, _}} = leo_pod:status(PodName),
-    ?assertEqual(PodSize, WorkerNum6),
+    ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
 
     %% Execute-4 - [checkout > exec > checkin]
     ok = execute_1(16, PodName1, echo_1),
 
-    {ok, {_, WorkerNum7, _}} = leo_pod:status(PodName),
-    ?assertEqual(PodSize, WorkerNum7),
+    ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
     ok.
 
 
