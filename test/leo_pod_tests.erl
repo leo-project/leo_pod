@@ -69,11 +69,9 @@ suite_(_) ->
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% Execute-2 - [checkout > exec > checkin]
-    ok = execute_2(10, PodName, echo_2),
+    ok = execute_2(PodSize + 2, PodName, echo_2),
     timer:sleep(100),
-    {ok, {NumWorking, NumStandby, NumOverflow4}} = leo_pod:status(PodName),
-    ?assertEqual({NumWorking, NumStandby}, {10, 0}),
-    ?assertEqual(true, NumOverflow4 < MaxOverflow),
+    ?assertEqual({ok, {PodSize + 2, 0, MaxOverflow - 2}}, leo_pod:status(PodName)),
     timer:sleep(300),
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 

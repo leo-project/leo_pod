@@ -1,4 +1,4 @@
-# **leo_pod** -  A Fast Erlang worker pool manager
+# leo_pod -  A Fast Erlang worker pool manager
 
 **leo_pod** is an Erlang worker pool manager.
 It is implemented no to use ETS (Erlang Term Storage).
@@ -6,7 +6,7 @@ This is because we met a problem of ETS when we run it on high spec machines.
 
 ## Usage
 
-See files under the `test/` directory in the repository.
+See files under the [`test/`](https://github.com/leo-project/leo_pod/tree/develop/test) directory in the repository.
 
 ```Erlang
 
@@ -30,7 +30,7 @@ See files under the `test/` directory in the repository.
 
 ## Usage in Leo Project
 
-**leo_pod** is used in **leo_rpc** library.
+**leo_pod** is used in [**leo_rpc**](https://github.com/leo-project/leo_rpc) library.
 It is used to mangage the number of process of RPC clients for each node.
 It is necessary because some OS has the limit for the number of file descriptors
 and therefore connections to the other nodes.
