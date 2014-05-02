@@ -160,10 +160,10 @@ handle_call(status, _From, #state{num_of_children = NumOfChildren,
                                       num_overflow = NumOverflow,
                                       worker_pids = Children} = State) ->
     case length(Children) of
-        N when N > 0 ->
-            {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State};
         0 ->
-            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow, 0, NumOverflow}}, State}
+            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow, 0, NumOverflow}}, State};
+        N ->
+            {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State}
     end;
 
 %% @doc Retrieve the current raw status
