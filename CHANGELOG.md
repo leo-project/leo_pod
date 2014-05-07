@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.6.0 (May 7, 2014)
+
+* Improved
+    * Able to retrieve status of a detail pod
+
 ## 0.4.6 (Sep 27, 2013)
 
 * Improved

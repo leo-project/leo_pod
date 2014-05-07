@@ -27,7 +27,8 @@
 -export([child_spec/6,
          checkout/1,
          checkin/2,
-         checkin_async/2
+         checkin_async/2,
+         status/1
         ]).
 
 
@@ -54,6 +55,10 @@ checkin(PodName, Worker) ->
 checkin_async(PodName, Worker) ->
     leo_pod_manager:checkin_async(PodName, Worker).
 
+%% @doc Get the status of the pod_manager
+%%
+status(PodName) ->
+    leo_pod_manager:status(PodName).
 
 %% ===================================================================
 %% Internal functions
