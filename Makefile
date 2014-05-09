@@ -13,9 +13,10 @@ xref:
 	@$(REBAR) xref skip_deps=true
 eunit:
 	@$(REBAR) eunit skip_deps=true
+doc: compile
+	@$(REBAR) doc
 clean:
 	@$(REBAR) clean skip_deps=true
 distclean:
 	@$(REBAR) delete-deps
 	@$(REBAR) clean
-

@@ -50,7 +50,7 @@
 
 -record(state, {num_of_children = 8 :: pos_integer(),
                 max_overflow = 8    :: pos_integer(),
-                num_overflow = 8    :: pos_integer(),
+                num_overflow = 8    :: non_neg_integer(),
                 worker_mod          :: atom(),
                 worker_args = []    :: list(tuple()),
                 worker_pids = []    :: list()
@@ -248,8 +248,8 @@ start_child(WorkerMod, WorkerArgs) ->
             {error, Cause}
     end.
 
--spec(start_child(integer(), atom(), list(any()), list(pid())) ->
-             {ok, pid()} | {error, any()}).
+-spec(start_child(non_neg_integer(), atom(), list(any()), list(pid())) ->
+             {ok, list(pid())} | {error, any()}).
 start_child(0,_,_,Children) ->
     {ok, Children};
 start_child(Index, WorkerMod, WorkerArgs, Children) ->

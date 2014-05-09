@@ -2,3 +2,4 @@
 deps/
 ebin/
 test/*.beam
+doc/
