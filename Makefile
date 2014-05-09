@@ -7,7 +7,6 @@ all:
 	@$(REBAR) compile
 	@$(REBAR) xref skip_deps=true
 	@$(REBAR) eunit skip_deps=true
-	@$(REBAR) doc
 compile:
 	@$(REBAR) compile skip_deps=true
 xref:
