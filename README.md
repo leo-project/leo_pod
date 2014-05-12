@@ -22,7 +22,7 @@ See files under the [`test/`](https://github.com/leo-project/leo_pod/tree/develo
 
     %% Execute - [checkout > call > checkin]
     {ok, Worker} = leo_pod:checkout(PodName),
-    {ok, _Reply} = gen_server:call(Worker, {echo_1, <<"Hello Hal,">>}),
+    {ok, _Reply} = gen_server:call(Worker, {echo, <<"Hello Hal,">>}),
     ok = leo_pod:checkin(PodName, Worker),
     ok.
 
