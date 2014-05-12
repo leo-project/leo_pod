@@ -26,7 +26,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_link/5, start_link/6, stop/1]).
+-export([start_link/5, start_link/6, stop/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -35,9 +35,6 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
-start_link() ->
-    supervisor:start_link(?MODULE, []).
-
 start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
     start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, undefined).
 
@@ -58,9 +55,6 @@ stop(Id) ->
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
-init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} };
-
 init([Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
     ChildSpec = {Id,
                  {leo_pod_manager, start_link,

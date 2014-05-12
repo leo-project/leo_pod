@@ -53,13 +53,13 @@ suite_(_) ->
     InitFun = fun(_ManagerRef) ->
             void
     end,
-    leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs, InitFun),
+    leo_pod:start_link(PodName, PodSize, MaxOverflow, ModName, WorkerArgs, InitFun),
 
     %% Confirm procs #1
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% Execute-1 - [checkout > exec > checkin]
-    ok = execute_1(10000, PodName, echo_1),
+    ok = execute_1(10000, PodName, echo),
 
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
@@ -69,7 +69,7 @@ suite_(_) ->
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
 
     %% Execute-2 - [checkout > exec > checkin]
-    ok = execute_2(PodSize + 2, PodName, echo_2),
+    ok = execute_2(PodSize + 2, PodName, slow_echo),
     timer:sleep(100),
     ?assertEqual({ok, {PodSize + 2, 0, MaxOverflow - 2}}, leo_pod:status(PodName)),
     timer:sleep(300),
@@ -83,13 +83,13 @@ suite_(_) ->
     WorkerArgs1  = [{protocol, tcp},
                     {host, "127.0.0.1"},
                     {port, 8080}],
-    leo_pod:child_spec(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1, InitFun),
+    leo_pod:start_link(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1, InitFun),
 
     %% Confirm procs #2
     ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
 
     %% Execute-4 - [checkout > exec > checkin]
-    ok = execute_1(16, PodName1, echo_1),
+    ok = execute_1(16, PodName1, echo),
 
     ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
     ok.
