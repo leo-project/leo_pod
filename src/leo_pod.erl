@@ -36,41 +36,41 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
-%% @doc Initialize a work pool
+%% @doc Initialize a work pool.
 %%
 -spec start_link(atom(),non_neg_integer(),non_neg_integer(),atom(),[any()],fun((any()) -> any())) -> {'ok',pid()}.
 start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     leo_pod_sup:start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
 
 
-%% @doc Stop the worker pool
+%% @doc Stop the worker pool.
 %%
 -spec stop(atom()) -> 'true' | 'not_started'.
 stop(PodName) ->
     leo_pod_sup:stop(PodName).
 
 
-%% @doc Checkout a worker from the worker pool
+%% @doc Checkout a worker from the worker pool.
 %%
 -spec checkout(atom()) -> pid().
 checkout(PodName) ->
     leo_pod_manager:checkout(PodName).
 
 
-%% @doc Checkin a worker into the worker pool
+%% @doc Checkin a worker into the worker pool.
 %%
 -spec checkin(atom(), pid()) -> ok.
 checkin(PodName, Worker) ->
     leo_pod_manager:checkin(PodName, Worker).
 
-%% @doc Checkin a worker into the worker pool assynchronously
+%% @doc Checkin a worker into the worker pool assynchronously.
 %%
 -spec checkin_async(atom(), pid()) -> ok.
 checkin_async(PodName, Worker) ->
     leo_pod_manager:checkin_async(PodName, Worker).
 
-%% @doc Get the status of the worker pool
-%%
+%% @doc Get the status of the worker pool.
+%% It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
 -spec status(atom()) -> {non_neg_integer(), non_neg_integer(), non_neg_integer()}.
 status(PodName) ->
     leo_pod_manager:status(PodName).
