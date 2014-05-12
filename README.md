@@ -18,11 +18,11 @@ See files under the [`test/`](https://github.com/leo-project/leo_pod/tree/develo
     WorkerArgs  = [{protocol, tcp},
                    {host, "127.0.0.1"},
                    {port, 8080}],
-    leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs),
+    leo_pod:start_link(PodName, PodSize, MaxOverflow, ModName, WorkerArgs),
 
     %% Execute - [checkout > call > checkin]
     {ok, Worker} = leo_pod:checkout(PodName),
-    {ok, _Reply} = gen_server:call(Worker, {Fun, <<"Hello Hal,">>}),
+    {ok, _Reply} = gen_server:call(Worker, {echo_1, <<"Hello Hal,">>}),
     ok = leo_pod:checkin(PodName, Worker),
     ok.
 

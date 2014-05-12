@@ -24,7 +24,7 @@
 -author('Yosuke Hara').
 
 %% API
--export([child_spec/6,
+-export([start_link/6,
          checkout/1,
          checkin/2,
          checkin_async/2,
@@ -35,9 +35,9 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
-%% @doc Set child worker's spec and launch a proc
+%% @doc Start leo_pod and create work pool
 %%
-child_spec(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+start_link(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     leo_pod_sup:start_link(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
 
 

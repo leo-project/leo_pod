@@ -234,7 +234,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 %% @doc Start a child-worker
 %% @private
--spec(start_child(atom(), list(any())) ->
+-spec(start_child(atom(), [any()]) ->
              {ok, pid()} | {error, any()}).
 start_child(WorkerMod, WorkerArgs) ->
     case WorkerMod:start_link(WorkerArgs) of
@@ -248,8 +248,10 @@ start_child(WorkerMod, WorkerArgs) ->
             {error, Cause}
     end.
 
--spec(start_child(non_neg_integer(), atom(), list(any()), list(pid())) ->
-             {ok, list(pid())} | {error, any()}).
+%% @doc Start multiple child-workers
+%% @private
+-spec(start_child(non_neg_integer(), atom(), list(any()), [pid()]) ->
+             {ok, [pid()]} | {error, any()}).
 start_child(0,_,_,Children) ->
     {ok, Children};
 start_child(Index, WorkerMod, WorkerArgs, Children) ->
