@@ -52,7 +52,7 @@ stop(PodName) ->
 
 %% @doc Checkout a worker from the worker pool.
 %%
--spec checkout(atom()) -> pid().
+-spec checkout(atom()) -> {ok, pid()}.
 checkout(PodName) ->
     leo_pod_manager:checkout(PodName).
 
@@ -71,7 +71,9 @@ checkin_async(PodName, Worker) ->
 
 %% @doc Get the status of the worker pool.
 %% It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
--spec status(atom()) -> {non_neg_integer(), non_neg_integer(), non_neg_integer()}.
+-spec status(atom()) -> {ok, {non_neg_integer(),
+                              non_neg_integer(),
+                              non_neg_integer()}}.
 status(PodName) ->
     leo_pod_manager:status(PodName).
 
