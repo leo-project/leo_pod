@@ -62,30 +62,56 @@
 %% ===================================================================
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
 %% Description: Starts the server
+-spec(start_link(atom(), pos_integer(), non_neg_integer(),
+                 atom(), [any()], function()) ->
+             {ok, pid()} | ignore | {error, any()}).
 start_link(Id, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     gen_server:start_link({local, Id}, ?MODULE,
                           [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
 
+
+-spec(stop(atom()) ->
+             ok | {error, any()}).
 stop(Id) ->
     gen_server:call(Id, stop, 30000).
 
+
+-spec(checkout(atom()) ->
+             {ok, pid()} | {error, empty}).
 checkout(Id) ->
     gen_server:call(Id, checkout).
 
+
+-spec(checkin(atom(), pid()) ->
+             ok | {error, any()}).
 checkin(Id, WorkerPid) ->
     gen_server:call(Id, {checkin, WorkerPid}).
 
+
+-spec(checkin_async(atom(), pid()) -> ok).
 checkin_async(Id, WorkerPid) ->
     gen_server:cast(Id, {checkin_async, WorkerPid}).
 
+
+-spec(status(atom()) ->
+             {ok, {non_neg_integer(),
+                   non_neg_integer(),
+                   non_neg_integer()}}).
 status(Id) ->
     gen_server:call(Id, status).
 
+
+-spec(raw_status(atom()) ->
+             {ok, [tuple()]} | {error, any()}).
 raw_status(Id) ->
     gen_server:call(Id, raw_status).
 
+
+-spec(pool_pids(atom()) ->
+             {ok, [pid()]} | {error, any()}).
 pool_pids(Id) ->
     gen_server:call(Id, pool_pids).
+
 
 %% ===================================================================
 %% gen_server callbacks
@@ -146,7 +172,7 @@ handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
 handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
                                                 num_overflow = NumOverflow,
                                                 worker_pids = Children} = State) ->
-    case length(Children) >= NumOfChildren of 
+    case length(Children) >= NumOfChildren of
         true ->
             {reply, ok, State#state{num_overflow = NumOverflow + 1}};
         false ->
@@ -154,14 +180,19 @@ handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
             {reply, ok, State#state{worker_pids = NewChildren}}
     end;
 
-%% @doc Retrieve the current status in pretty format {working_process_count, worker_process_count, overflow_count}
+%% @doc Retrieve the current status in pretty format as follows:
+%%      format: { working_process_count,
+%%                worker_process_count,
+%%                overflow_count }
+%%
 handle_call(status, _From, #state{num_of_children = NumOfChildren,
-                                      max_overflow = MaxOverflow,
-                                      num_overflow = NumOverflow,
-                                      worker_pids = Children} = State) ->
+                                  max_overflow = MaxOverflow,
+                                  num_overflow = NumOverflow,
+                                  worker_pids = Children} = State) ->
     case length(Children) of
         0 ->
-            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow, 0, NumOverflow}}, State};
+            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow,
+                          0, NumOverflow}}, State};
         N ->
             {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State}
     end;
