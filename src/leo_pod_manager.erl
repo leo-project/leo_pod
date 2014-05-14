@@ -145,12 +145,7 @@ close(Id) ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
-    case InitFun of
-        undefined ->
-            void;
-        _Fun ->
-            InitFun(self())
-    end,
+    InitFun(self()),
 
     case start_child(NumOfChildren, WorkerMod, WorkerArgs, []) of
         {ok, Children} ->

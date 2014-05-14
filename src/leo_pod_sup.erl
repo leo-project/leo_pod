@@ -42,7 +42,8 @@
                  non_neg_integer(), atom(), [any()]) ->
              {ok, pid()} | ignore | {error, any()}).
 start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
-    start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, undefined).
+    Fun = fun(_) -> ok end,
+    start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, Fun).
 
 -spec(start_link(atom(), non_neg_integer(),
                  non_neg_integer(), atom(), [any()], undefined|function()) ->
