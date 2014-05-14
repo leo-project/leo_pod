@@ -90,8 +90,11 @@ suite_(_) ->
 
     %% Execute-4 - [checkout > exec > checkin]
     ok = execute_1(16, PodName1, echo),
-
     ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
+
+    %% Termination
+    leo_pod:stop(PodName),
+    leo_pod:stop(PodName1),
     ok.
 
 
