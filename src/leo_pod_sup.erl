@@ -61,8 +61,7 @@ stop(Id) ->
     case whereis(SupRef) of
         Pid when is_pid(Pid) ->
             List = supervisor:which_children(Pid),
-            close_workers(List),
-            ok;
+            stop_workers(List);
         _ ->
             not_started
     end.
@@ -97,12 +96,12 @@ gen_sup_id(PodId) when is_atom(PodId)  ->
 
 %% @doc Close woker processes
 %% @private
--spec(close_workers([tuple()]) ->
+-spec(stop_workers([tuple()]) ->
              ok).
-close_workers([]) ->
+stop_workers([]) ->
     ok;
-close_workers([{Id,_Pid,worker,[leo_pod_manager = Mod]}|Rest]) ->
+stop_workers([{Id,_Pid,worker,[leo_pod_manager = Mod]}|Rest]) ->
     _ = Mod:close(Id),
-    close_workers(Rest);
-close_workers([_|Rest]) ->
-    close_workers(Rest).
+    stop_workers(Rest);
+stop_workers([_|Rest]) ->
+    stop_workers(Rest).
