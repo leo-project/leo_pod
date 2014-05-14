@@ -3,3 +3,4 @@ deps/
 ebin/
 test/*.beam
 doc/
+.leo_pod_combo_dialyzer_plt
