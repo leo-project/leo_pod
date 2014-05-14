@@ -4,3 +4,5 @@ ebin/
 test/*.beam
 doc/
 .leo_pod_combo_dialyzer_plt
+leo_pod.dot
+leo_pod.png
