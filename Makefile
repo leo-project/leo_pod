@@ -1,8 +1,10 @@
 .PHONY: deps test
 
 REBAR := ./rebar
-APPS = erts kernel stdlib sasl
-PLT_FILE = .leo_pod_combo_dialyzer_plt
+APPS = erts kernel stdlib sasl crypto compiler inets mnesia public_key runtime_tools snmp syntax_tools tools xmerl webtool
+PLT_FILE = .leo_pod_dialyzer_plt
+DOT_FILE = leo_pod.dot
+CALL_GRAPH_FILE = leo_pod.png
 
 all:
 	@$(REBAR) update-deps
@@ -24,12 +26,11 @@ build_plt:
 	dialyzer --build_plt --output_plt $(PLT_FILE) --apps $(APPS)
 dialyzer:
 	@$(REBAR) compile
-	dialyzer --plt $(PLT_FILE) --dump_callgraph leo_pod.dot -r src/ --src
+	dialyzer --plt $(PLT_FILE) --dump_callgraph $(DOT_FILE) -r ebin/ 
 doc: compile
 	@$(REBAR) doc
 callgraph: graphviz
-	dot -Tpng -oleo_pod.png leo_pod.dot
-	@echo "Dependency graph created as leo_pod.png"
+	dot -Tpng -o$(CALL_GRAPH_FILE) $(DOT_FILE)
 graphviz:
 	$(if $(shell which dot),,$(error "To make the depgraph, you need graphviz installed"))
 clean:
