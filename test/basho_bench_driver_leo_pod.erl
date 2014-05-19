@@ -38,7 +38,7 @@ new(1) ->
     WorkerArgs  = [{protocol, tcp},
                    {host, "127.0.0.1"},
                    {port, 8080}],
-    Ret = leo_pod:child_spec(PodName, PodSize, MaxOverflow, ModName, WorkerArgs),
+    Ret = leo_pod:start_link(PodName, PodSize, MaxOverflow, ModName, WorkerArgs),
     ?debugVal(Ret),
     {ok, null};
 new(_) ->

@@ -22,13 +22,11 @@
 %%======================================================================
 {application, leo_pod,
  [
-  {description, "leo_pod manages and pools worker processes"},
-  {vsn, "0.6.0"},
-  {registered, []},
+  {description, "leo_pod manages worker process pools"},
+  {vsn, "0.6.1"},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { leo_pod_app, []}},
-  {env, []}
+  {registered, [leo_pod]}
  ]}.

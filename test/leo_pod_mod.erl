@@ -66,10 +66,10 @@ init([WorkerArgs]) ->
 handle_call(stop,_From, State) ->
     {stop, normal, ok, State};
 
-handle_call({echo_1, Msg},_From, State) ->
+handle_call({echo, Msg},_From, State) ->
     {reply, {ok, Msg}, State};
 
-handle_call({echo_2, Msg},_From, State) ->
+handle_call({slow_echo, Msg},_From, State) ->
     timer:sleep(300),
     {reply, {ok, Msg}, State}.
 

@@ -37,7 +37,8 @@
          checkin_async/2,
          status/1,
          raw_status/1,
-         pool_pids/1
+         pool_pids/1,
+         close/1
         ]).
 
 %% gen_server callbacks
@@ -50,7 +51,7 @@
 
 -record(state, {num_of_children = 8 :: pos_integer(),
                 max_overflow = 8    :: pos_integer(),
-                num_overflow = 8    :: pos_integer(),
+                num_overflow = 8    :: non_neg_integer(),
                 worker_mod          :: atom(),
                 worker_args = []    :: list(tuple()),
                 worker_pids = []    :: list()
@@ -62,30 +63,78 @@
 %% ===================================================================
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
 %% Description: Starts the server
+-spec(start_link(atom(), pos_integer(), non_neg_integer(),
+                 atom(), [any()], function()) ->
+             {ok, pid()} | ignore | {error, any()}).
 start_link(Id, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     gen_server:start_link({local, Id}, ?MODULE,
                           [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
 
+
+-spec(stop(atom()) ->
+             ok | {error, any()}).
 stop(Id) ->
     gen_server:call(Id, stop, 30000).
 
+
+%% @doc Check out a worker from a pool
+%%
+-spec(checkout(atom()) ->
+             {ok, pid()} | {error, empty}).
 checkout(Id) ->
     gen_server:call(Id, checkout).
 
+
+%% @doc Check in a worker at a pool
+%%
+-spec(checkin(atom(), pid()) ->
+             ok | {error, any()}).
 checkin(Id, WorkerPid) ->
     gen_server:call(Id, {checkin, WorkerPid}).
 
+
+%% @doc Check in a worker at a pool with asynchronous
+%%
+-spec(checkin_async(atom(), pid()) -> ok).
 checkin_async(Id, WorkerPid) ->
     gen_server:cast(Id, {checkin_async, WorkerPid}).
 
+
+%% @doc Retrieve the current status in pretty format as follows:
+%%      format: { working_process_count,
+%%                worker_process_count,
+%%                overflow_count }
+-spec(status(atom()) ->
+             {ok, {non_neg_integer(),
+                   non_neg_integer(),
+                   non_neg_integer()}}).
 status(Id) ->
     gen_server:call(Id, status).
 
+
+%% @doc Retrieve a raw status of specified Id
+%%
+-spec(raw_status(atom()) ->
+             {ok, [tuple()]} | {error, any()}).
 raw_status(Id) ->
     gen_server:call(Id, raw_status).
 
+
+%% @doc Retrieve pids of specified Id
+%%
+-spec(pool_pids(atom()) ->
+             {ok, [pid()]} | {error, any()}).
 pool_pids(Id) ->
     gen_server:call(Id, pool_pids).
+
+
+%% @doc Retrieve pids of specified Id
+%%
+-spec(close(atom()) ->
+             ok | {error, any()}).
+close(Id) ->
+    gen_server:call(Id, close).
+
 
 %% ===================================================================
 %% gen_server callbacks
@@ -96,12 +145,7 @@ pool_pids(Id) ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
-    case InitFun of
-        undefined ->
-            void;
-        _Fun ->
-            InitFun(self())
-    end,
+    InitFun(self()),
 
     case start_child(NumOfChildren, WorkerMod, WorkerArgs, []) of
         {ok, Children} ->
@@ -118,8 +162,6 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
 handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
 
-
-%% @doc Checkout a worker
 handle_call(checkout, _From, #state{worker_pids  = [],
                                     num_overflow = 0} = State) ->
     {reply, {error, empty}, State};
@@ -142,11 +184,10 @@ handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
     [WorkerPid|NewChildren] = Children,
     {reply, {ok, WorkerPid}, State#state{worker_pids = NewChildren}};
 
-%% @doc Checkin a worker
 handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
                                                 num_overflow = NumOverflow,
                                                 worker_pids = Children} = State) ->
-    case length(Children) >= NumOfChildren of 
+    case length(Children) >= NumOfChildren of
         true ->
             {reply, ok, State#state{num_overflow = NumOverflow + 1}};
         false ->
@@ -154,24 +195,27 @@ handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
             {reply, ok, State#state{worker_pids = NewChildren}}
     end;
 
-%% @doc Retrieve the current status in pretty format {working_process_count, worker_process_count, overflow_count}
 handle_call(status, _From, #state{num_of_children = NumOfChildren,
-                                      max_overflow = MaxOverflow,
-                                      num_overflow = NumOverflow,
-                                      worker_pids = Children} = State) ->
+                                  max_overflow = MaxOverflow,
+                                  num_overflow = NumOverflow,
+                                  worker_pids = Children} = State) ->
     case length(Children) of
         0 ->
-            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow, 0, NumOverflow}}, State};
+            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow,
+                          0, NumOverflow}}, State};
         N ->
             {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State}
     end;
 
-%% @doc Retrieve the current raw status
 handle_call(raw_status, _From, State) ->
     {reply, {ok, lists:zip(record_info(fields, state),tl(tuple_to_list(State)))}, State};
 
 handle_call(pool_pids, _From, #state{worker_pids = Children} = State) ->
-    {reply, {ok, Children}, State}.
+    {reply, {ok, Children}, State};
+
+handle_call(close, _From, State) ->
+    {reply, ok, State#state{worker_pids = []}}.
+
 
 %% Function: handle_cast(Msg, State) -> {noreply, State}          |
 %%                                      {noreply, State, Timeout} |
@@ -234,7 +278,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 %% @doc Start a child-worker
 %% @private
--spec(start_child(atom(), list(any())) ->
+-spec(start_child(atom(), [any()]) ->
              {ok, pid()} | {error, any()}).
 start_child(WorkerMod, WorkerArgs) ->
     case WorkerMod:start_link(WorkerArgs) of
@@ -248,8 +292,10 @@ start_child(WorkerMod, WorkerArgs) ->
             {error, Cause}
     end.
 
--spec(start_child(integer(), atom(), list(any()), list(pid())) ->
-             {ok, pid()} | {error, any()}).
+%% @doc Start multiple child-workers
+%% @private
+-spec(start_child(non_neg_integer(), atom(), list(any()), [pid()]) ->
+             {ok, [pid()]} | {error, any()}).
 start_child(0,_,_,Children) ->
     {ok, Children};
 start_child(Index, WorkerMod, WorkerArgs, Children) ->

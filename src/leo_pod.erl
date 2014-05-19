@@ -24,7 +24,8 @@
 -author('Yosuke Hara').
 
 %% API
--export([child_spec/6,
+-export([start_link/6,
+         stop/1,
          checkout/1,
          checkin/2,
          checkin_async/2,
@@ -35,28 +36,44 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
-%% @doc Set child worker's spec and launch a proc
+%% @doc Initialize a work pool.
 %%
-child_spec(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
-    leo_pod_sup:start_link(Name, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
+-spec start_link(atom(),non_neg_integer(),non_neg_integer(),atom(),[any()],fun((any()) -> any())) -> {'ok',pid()}.
+start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+    leo_pod_sup:start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
 
 
-%% @doc Checkout a worker from the pod_manager
+%% @doc Stop the worker pool.
 %%
+-spec stop(atom()) -> 'true' | 'not_started'.
+stop(PodName) ->
+    leo_pod_sup:stop(PodName).
+
+
+%% @doc Checkout a worker from the worker pool.
+%%
+-spec checkout(atom()) -> {ok, pid()}.
 checkout(PodName) ->
     leo_pod_manager:checkout(PodName).
 
 
-%% @doc Checkin a worker into the pod_manager
+%% @doc Checkin a worker into the worker pool.
 %%
+-spec checkin(atom(), pid()) -> ok.
 checkin(PodName, Worker) ->
     leo_pod_manager:checkin(PodName, Worker).
 
+%% @doc Checkin a worker into the worker pool assynchronously.
+%%
+-spec checkin_async(atom(), pid()) -> ok.
 checkin_async(PodName, Worker) ->
     leo_pod_manager:checkin_async(PodName, Worker).
 
-%% @doc Get the status of the pod_manager
-%%
+%% @doc Get the status of the worker pool.
+%% It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
+-spec status(atom()) -> {ok, {non_neg_integer(),
+                              non_neg_integer(),
+                              non_neg_integer()}}.
 status(PodName) ->
     leo_pod_manager:status(PodName).
 
