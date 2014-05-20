@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.6.2 (May 20, 2014)
+
+* Improved
+    * Supported OTP 17.0
+
 ## 0.6.1 (May 19, 2014)
 
 * Improved
