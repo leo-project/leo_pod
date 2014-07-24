@@ -57,13 +57,13 @@ checkout(PodName) ->
     leo_pod_manager:checkout(PodName).
 
 
-%% @doc Checkin a worker into the worker pool.
+%% @doc Checkin the worker into the worker pool.
 %%
 -spec checkin(atom(), pid()) -> ok.
 checkin(PodName, Worker) ->
     leo_pod_manager:checkin(PodName, Worker).
 
-%% @doc Checkin a worker into the worker pool assynchronously.
+%% @doc Checkin the worker into the worker pool assynchronously.
 %%
 -spec checkin_async(atom(), pid()) -> ok.
 checkin_async(PodName, Worker) ->
