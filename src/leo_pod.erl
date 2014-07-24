@@ -38,7 +38,7 @@
 %% ===================================================================
 %% @doc Initialize a work pool.
 %%
--spec start_link(atom(),non_neg_integer(),non_neg_integer(),atom(),[any()],fun((any()) -> any())) -> {'ok',pid()}.
+-spec start_link(atom(),non_neg_integer(),non_neg_integer(),module(),[any()],fun((any()) -> any())) -> {'ok',pid()}.
 start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     leo_pod_sup:start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
 
