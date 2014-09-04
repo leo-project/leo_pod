@@ -38,42 +38,62 @@
 %% ===================================================================
 %% @doc Initialize a work pool.
 %%
--spec start_link(atom(),non_neg_integer(),non_neg_integer(),atom(),[any()],fun((any()) -> any())) -> {'ok',pid()}.
+-spec start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) -> {'ok',pid()} when
+      PodName :: atom(),
+      PodSize :: non_neg_integer(),
+      MaxOverflow :: non_neg_integer(),
+      WorkerMod :: module(),
+      WorkerArgs :: [any()],
+      InitFun :: function().
+
 start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     leo_pod_sup:start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
 
 
 %% @doc Stop the worker pool.
 %%
--spec stop(atom()) -> 'true' | 'not_started'.
+-spec stop(PodName) -> 'true' | 'not_started' when
+      PodName :: atom().
+
 stop(PodName) ->
     leo_pod_sup:stop(PodName).
 
 
 %% @doc Checkout a worker from the worker pool.
 %%
--spec checkout(atom()) -> {ok, pid()}.
+-spec checkout(PodName) -> {ok, pid()} when
+      PodName :: atom().
+
 checkout(PodName) ->
     leo_pod_manager:checkout(PodName).
 
 
-%% @doc Checkin a worker into the worker pool.
+%% @doc Checkin the worker into the worker pool.
 %%
--spec checkin(atom(), pid()) -> ok.
+-spec checkin(PodName, Worker) -> ok when
+      PodName :: atom(),
+      Worker :: pid().
+
 checkin(PodName, Worker) ->
     leo_pod_manager:checkin(PodName, Worker).
 
-%% @doc Checkin a worker into the worker pool assynchronously.
+%% @doc Checkin the worker into the worker pool assynchronously.
 %%
--spec checkin_async(atom(), pid()) -> ok.
+-spec checkin_async(PodName, Worker) -> ok when
+      PodName :: atom(),
+      Worker :: pid().
+
 checkin_async(PodName, Worker) ->
     leo_pod_manager:checkin_async(PodName, Worker).
 
 %% @doc Get the status of the worker pool.
 %% It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
--spec status(atom()) -> {ok, {non_neg_integer(),
-                              non_neg_integer(),
-                              non_neg_integer()}}.
+-spec status(PodName) -> {ok, {NumOfWorking, NumOfWating, NumOfRoomForOverflow}} when
+      PodName :: atom(),
+      NumOfWorking :: non_neg_integer(),
+      NumOfWating :: non_neg_integer(),
+      NumOfRoomForOverflow :: non_neg_integer().
+
 status(PodName) ->
     leo_pod_manager:status(PodName).
 
