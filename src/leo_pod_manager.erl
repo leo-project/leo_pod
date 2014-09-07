@@ -64,7 +64,8 @@
 %% ===================================================================
 %% API functions
 %% ===================================================================
-%% @doc Initialize a wooker pool.
+%% @doc Initialize a wooker pool
+%%
 -spec(start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
              {ok, pid()} | ignore | {error, any()} when PodName :: atom(),
                                                         NumOfChildren :: pos_integer(),
@@ -77,21 +78,24 @@ start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) 
                           [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
 
 
-%% @doc Stop the worker pool.
+%% @doc Stop the worker pool
+%%
 -spec(stop(PodName) ->
              ok | {error, any()} when PodName :: atom()).
 stop(PodName) ->
     gen_server:call(PodName, stop, 30000).
 
 
-%% @doc Check out a worker from the worker pool.
+%% @doc Check out a worker from the worker pool
+%%
 -spec(checkout(PodName) ->
              {ok, pid()} | {error, empty} when PodName :: atom()).
 checkout(PodName) ->
     gen_server:call(PodName, checkout).
 
 
-%% @doc Check in a worker to the woker pool.
+%% @doc Check in a worker to the woker pool
+%%
 -spec(checkin(PodName, WorkerPid) ->
              ok | {error, any()} when PodName :: atom(),
                                       WorkerPid :: pid()).
@@ -99,7 +103,8 @@ checkin(PodName, WorkerPid) ->
     gen_server:call(PodName, {checkin, WorkerPid}).
 
 
-%% @doc Check in a worker to the worker pool with asynchronous.
+%% @doc Check in a worker to the worker pool with asynchronous
+%%
 -spec(checkin_async(PodName, WorkerPid) ->
              ok when PodName :: atom(),
                      WorkerPid :: pid()).
@@ -111,6 +116,7 @@ checkin_async(PodName, WorkerPid) ->
 %%      format: { working_process_count,
 %%                worker_process_count,
 %%                overflow_count }
+%% @end
 -spec(status(PodName) ->
              {ok, {NumOfWorking, NumOfWating,
                    NumOfRoomForOverflow}} when PodName :: atom(),
@@ -122,6 +128,7 @@ status(PodName) ->
 
 
 %% @doc Retrieve a raw status of specified PodName
+%%
 -spec(raw_status(PodName) ->
              {ok, [tuple()]} |
              {error, any()} when PodName :: atom()).
@@ -130,6 +137,7 @@ raw_status(PodName) ->
 
 
 %% @doc Retrieve pids of specified PodName
+%%
 -spec(pool_pids(PodName) ->
              {ok, [pid()]} |
              {error, any()} when PodName :: atom()).
@@ -138,6 +146,7 @@ pool_pids(PodName) ->
 
 
 %% @doc Retrieve pids of specified PodName
+%%
 -spec(close(PodName) ->
              ok | {error, any()} when PodName :: atom()).
 close(PodName) ->
@@ -147,11 +156,8 @@ close(PodName) ->
 %% ===================================================================
 %% gen_server callbacks
 %% ===================================================================
-%% Function: init(Args) -> {ok, State}          |
-%%                         {ok, State, Timeout} |
-%%                         ignore               |
-%%                         {stop, Reason}
-%% Description: Initiates the server
+%% @doc gen_server callback - Module:init(Args) -> Result
+%%
 init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
     InitFun(self()),
 
@@ -167,6 +173,8 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
             {stop, Cause}
     end.
 
+%% @doc gen_server callback - Module:handle_call(Request, From, State) -> Result
+%%
 handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
 
@@ -225,10 +233,8 @@ handle_call(close, _From, State) ->
     {reply, ok, State#state{worker_pids = []}}.
 
 
-%% Function: handle_cast(Msg, State) -> {noreply, State}          |
-%%                                      {noreply, State, Timeout} |
-%%                                      {stop, Reason, State}
-%% Description: Handling cast messages
+%% @doc gen_server callback - Module:handle_cast(Request, State) -> Result
+%%
 handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
                                                num_overflow = NumOverflow,
                                                worker_pids = Children} = State) ->
@@ -244,10 +250,8 @@ handle_cast(_, State) ->
     {noreply, State}.
 
 
-%% Function: handle_info(Info, State) -> {noreply, State}          |
-%%                                       {noreply, State, Timeout} |
-%%                                       {stop, Reason, State}
-%% Description: Handling all non call/cast messages
+%% @doc gen_server callback - Module:handle_info(Info, State) -> Result
+%%
 handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod  = WorkerMod,
                                                             worker_args = WorkerArgs,
                                                             worker_pids = ChildPids} = State) ->
@@ -266,17 +270,22 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 
-%% Function: terminate(Reason, State) -> void()
+%% @doc gen_server callback - Module:terminate(Reason, State)
+%% <p>
 %% Description: This function is called by a gen_server when it is about to
 %% terminate. It should be the opposite of Module:init/1 and do any necessary
 %% cleaning up. When it returns, the gen_server terminates with Reason.
 %% The return value is ignored.
+%% </p>
+%% @end
 terminate(_Reason, _State) ->
     ok.
 
-
-%% Func: code_change(OldVsn, State, Extra) -> {ok, NewState}
+%% @doc gen_server callback - Module:code_change(OldVsn, State, Extra) -> {ok, NewState} | {error, Reason}
+%% <p>
 %% Description: Convert process state when code is changed
+%% </p>
+%% @end
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 

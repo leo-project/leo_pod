@@ -86,7 +86,8 @@ checkin_async(PodName, Worker) ->
     leo_pod_manager:checkin_async(PodName, Worker).
 
 %% @doc Get the status of the worker pool.
-%% It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
+%%      It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
+%% @end
 -spec(status(PodName) ->
              {ok, {NumOfWorking, NumOfWating,
                    NumOfRoomForOverflow}} when PodName :: atom(),
