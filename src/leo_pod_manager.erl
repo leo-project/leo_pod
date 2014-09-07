@@ -18,6 +18,9 @@
 %% specific language governing permissions and limitations
 %% under the License.
 %%
+%% @doc leo_pod_manager can manage worker pools in the pod
+%% @reference https://github.com/leo-project/leo_pod/blob/master/src/leo_pod_manager.erl
+%% @end
 %%======================================================================
 -module(leo_pod_manager).
 
@@ -62,49 +65,44 @@
 %% API functions
 %% ===================================================================
 %% @doc Initialize a wooker pool.
--spec start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) -> {ok, pid()} | ignore | {error, any()} when
-      PodName :: atom(),
-      NumOfChildren :: pos_integer(),
-      MaxOverflow :: non_neg_integer(),
-      WorkerMod :: module(),
-      WorkerArgs :: [any()],
-      InitFun :: function().
-             
+-spec(start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+             {ok, pid()} | ignore | {error, any()} when PodName :: atom(),
+                                                        NumOfChildren :: pos_integer(),
+                                                        MaxOverflow :: non_neg_integer(),
+                                                        WorkerMod :: module(),
+                                                        WorkerArgs :: [any()],
+                                                        InitFun :: function()).
 start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     gen_server:start_link({local, PodName}, ?MODULE,
                           [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
 
 
 %% @doc Stop the worker pool.
--spec stop(PodName) -> ok | {error, any()} when
-      PodName :: atom().
-             
+-spec(stop(PodName) ->
+             ok | {error, any()} when PodName :: atom()).
 stop(PodName) ->
     gen_server:call(PodName, stop, 30000).
 
 
 %% @doc Check out a worker from the worker pool.
--spec checkout(PodName) -> {ok, pid()} | {error, empty} when
-      PodName :: atom().
-    
+-spec(checkout(PodName) ->
+             {ok, pid()} | {error, empty} when PodName :: atom()).
 checkout(PodName) ->
     gen_server:call(PodName, checkout).
 
 
 %% @doc Check in a worker to the woker pool.
--spec checkin(PodName, WorkerPid) -> ok | {error, any()} when
-      PodName :: atom(),
-      WorkerPid :: pid().
-    
+-spec(checkin(PodName, WorkerPid) ->
+             ok | {error, any()} when PodName :: atom(),
+                                      WorkerPid :: pid()).
 checkin(PodName, WorkerPid) ->
     gen_server:call(PodName, {checkin, WorkerPid}).
 
 
 %% @doc Check in a worker to the worker pool with asynchronous.
--spec checkin_async(PodName, WorkerPid) -> ok when
-      PodName :: atom(),
-      WorkerPid :: pid().
-
+-spec(checkin_async(PodName, WorkerPid) ->
+             ok when PodName :: atom(),
+                     WorkerPid :: pid()).
 checkin_async(PodName, WorkerPid) ->
     gen_server:cast(PodName, {checkin_async, WorkerPid}).
 
@@ -113,36 +111,35 @@ checkin_async(PodName, WorkerPid) ->
 %%      format: { working_process_count,
 %%                worker_process_count,
 %%                overflow_count }
--spec status(PodName) -> {ok, {NumOfWorking, NumOfWating, NumOfRoomForOverflow}} when
-      PodName :: atom(),
-      NumOfWorking :: non_neg_integer(),
-      NumOfWating :: non_neg_integer(),
-      NumOfRoomForOverflow :: non_neg_integer().
-    
+-spec(status(PodName) ->
+             {ok, {NumOfWorking, NumOfWating,
+                   NumOfRoomForOverflow}} when PodName :: atom(),
+                                               NumOfWorking :: non_neg_integer(),
+                                               NumOfWating :: non_neg_integer(),
+                                               NumOfRoomForOverflow :: non_neg_integer()).
 status(PodName) ->
     gen_server:call(PodName, status).
 
 
 %% @doc Retrieve a raw status of specified PodName
--spec raw_status(PodName) -> {ok, [tuple()]} | {error, any()} when
-      PodName :: atom().
-
+-spec(raw_status(PodName) ->
+             {ok, [tuple()]} |
+             {error, any()} when PodName :: atom()).
 raw_status(PodName) ->
     gen_server:call(PodName, raw_status).
 
 
 %% @doc Retrieve pids of specified PodName
--spec pool_pids(PodName) -> {ok, [pid()]} | {error, any()} when
-      PodName :: atom().
-    
+-spec(pool_pids(PodName) ->
+             {ok, [pid()]} |
+             {error, any()} when PodName :: atom()).
 pool_pids(PodName) ->
     gen_server:call(PodName, pool_pids).
 
 
 %% @doc Retrieve pids of specified PodName
--spec close(PodName) -> ok | {error, any()} when
-      PodName :: atom().
-
+-spec(close(PodName) ->
+             ok | {error, any()} when PodName :: atom()).
 close(PodName) ->
     gen_server:call(PodName, close).
 
@@ -293,7 +290,7 @@ code_change(_OldVsn, State, _Extra) ->
       WorkerMod :: module(),
       WorkerArgs :: [any()],
       ChildId :: pid().
-      
+
 start_child(WorkerMod, WorkerArgs) ->
     case WorkerMod:start_link(WorkerArgs) of
         {ok, ChildPid} ->
@@ -314,7 +311,7 @@ start_child(WorkerMod, WorkerArgs) ->
       WorkerArgs :: [any()],
       Children1 :: [pid()],
       Children2 :: [pid()].
-                                                             
+
 start_child(0,_,_,Children) ->
     {ok, Children};
 start_child(Index, WorkerMod, WorkerArgs, Children) ->
