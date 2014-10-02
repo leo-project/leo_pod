@@ -1,6 +1,20 @@
 #!/bin/sh
 
-rm -rf doc/rst && mkdir doc/rst
 make doc
-pandoc --read=html --write=rst doc/leo_pod.html -o doc/rst/leo_pod.rst
-pandoc --read=html --write=rst doc/leo_pod_manager.html -o doc/rst/leo_pod_manager.rst
+rm -rf doc/rst && mkdir doc/rst
+
+for Mod in leo_pod \
+           leo_pod_manager
+do
+    read_file="doc/$Mod.html"
+    write_file="doc/rst/$Mod.rst"
+
+    pandoc --read=html --write=rst "$read_file" -o "$write_file"
+
+    sed -ie "1,6d" "$write_file"
+    sed -ie "s/\Module //" "$write_file"
+    LINE_1=`cat $write_file | wc -l`
+    LINE_2=`expr $LINE_1 - 10`
+    sed -ie "$LINE_2,\$d" "$write_file"
+done
+rm -rf doc/rst/*.rste
