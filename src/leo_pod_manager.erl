@@ -205,8 +205,8 @@ handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
                                                 worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
-            % send stop
-            % actual stop process will happend at handle_info with DOWN
+            %% send stop
+            %% actual stop process will happend at handle_info with DOWN
             WorkerMod:stop(WorkerPid);
         false ->
             void
@@ -243,8 +243,8 @@ handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
                                                worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
-            % send stop
-            % actual stop process will happend at handle_info with DOWN
+            %% send stop
+            %% actual stop process will happend at handle_info with DOWN
             WorkerMod:stop(WorkerPid);
         false ->
             void
@@ -268,11 +268,11 @@ handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod      = Wo
     case length(ChildPids1) >= NumOfChildren of
         false ->
             ChildPids2 = case start_child(WorkerMod, WorkerArgs) of
-                {ok, ChildPid} ->
-                    [ChildPid|ChildPids1];
-                _ ->
-                    ChildPids1
-            end,
+                             {ok, ChildPid} ->
+                                 [ChildPid|ChildPids1];
+                             _ ->
+                                 ChildPids1
+                         end,
             {noreply, State#state{worker_pids = ChildPids2}};
         true ->
             {noreply, State#state{worker_pids = ChildPids1, num_overflow = NumOverflow - 1}}
