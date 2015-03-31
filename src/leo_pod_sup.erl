@@ -39,14 +39,14 @@
 %% API functions
 %% ===================================================================
 -spec(start_link(atom(), non_neg_integer(),
-                 non_neg_integer(), atom(), [any()]) ->
+                 non_neg_integer(), module(), [any()]) ->
              {ok, pid()} | ignore | {error, any()}).
 start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
     Fun = fun(_) -> ok end,
     start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, Fun).
 
 -spec(start_link(atom(), non_neg_integer(),
-                 non_neg_integer(), atom(), [any()], undefined|function()) ->
+                 non_neg_integer(), module(), [any()], undefined|function()) ->
              {ok, pid()} | ignore | {error, any()}).
 start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
     SupRef = gen_sup_id(Id),
