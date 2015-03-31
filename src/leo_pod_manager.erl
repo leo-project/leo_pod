@@ -201,15 +201,18 @@ handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
     {reply, {ok, WorkerPid}, State#state{worker_pids = NewChildren}};
 
 handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
-                                                num_overflow = NumOverflow,
+                                                worker_mod  = WorkerMod,
                                                 worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
-            {reply, ok, State#state{num_overflow = NumOverflow + 1}};
+            % send stop
+            % actual stop process will happend at handle_info with DOWN
+            WorkerMod:stop(WorkerPid);
         false ->
-            NewChildren = [WorkerPid|Children],
-            {reply, ok, State#state{worker_pids = NewChildren}}
-    end;
+            void
+    end,
+    NewChildren = [WorkerPid|Children],
+    {reply, ok, State#state{worker_pids = NewChildren}};
 
 handle_call(status, _From, #state{num_of_children = NumOfChildren,
                                   max_overflow = MaxOverflow,
@@ -236,15 +239,18 @@ handle_call(close, _From, State) ->
 %% @doc gen_server callback - Module:handle_cast(Request, State) -> Result
 %%
 handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
-                                               num_overflow = NumOverflow,
+                                               worker_mod  = WorkerMod,
                                                worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
-            {noreply, State#state{num_overflow = NumOverflow + 1}};
+            % send stop
+            % actual stop process will happend at handle_info with DOWN
+            WorkerMod:stop(WorkerPid);
         false ->
-            NewChildren = [WorkerPid|Children],
-            {noreply, State#state{worker_pids = NewChildren}}
-    end;
+            void
+    end,
+    NewChildren = [WorkerPid|Children],
+    {noreply, State#state{worker_pids = NewChildren}};
 
 handle_cast(_, State) ->
     {noreply, State}.
@@ -252,19 +258,25 @@ handle_cast(_, State) ->
 
 %% @doc gen_server callback - Module:handle_info(Info, State) -> Result
 %%
-handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod  = WorkerMod,
-                                                            worker_args = WorkerArgs,
-                                                            worker_pids = ChildPids} = State) ->
+handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod      = WorkerMod,
+                                                            worker_args     = WorkerArgs,
+                                                            num_of_children = NumOfChildren,
+                                                            num_overflow    = NumOverflow,
+                                                            worker_pids     = ChildPids} = State) ->
     true = erlang:demonitor(MonitorRef),
-
     ChildPids1 = lists:delete(Pid, ChildPids),
-    ChildPids2 = case start_child(WorkerMod, WorkerArgs) of
-                     {ok, ChildPid} ->
-                         [ChildPid|ChildPids1];
-                     _ ->
-                         ChildPids1
-                 end,
-    {noreply, State#state{worker_pids = ChildPids2}};
+    case length(ChildPids1) >= NumOfChildren of
+        false ->
+            ChildPids2 = case start_child(WorkerMod, WorkerArgs) of
+                {ok, ChildPid} ->
+                    [ChildPid|ChildPids1];
+                _ ->
+                    ChildPids1
+            end,
+            {noreply, State#state{worker_pids = ChildPids2}};
+        true ->
+            {noreply, State#state{worker_pids = ChildPids1, num_overflow = NumOverflow - 1}}
+    end;
 
 handle_info(_Info, State) ->
     {noreply, State}.
