@@ -21,37 +21,58 @@
 %%======================================================================
 -module(leo_pod_sup).
 
--author('Yosuke Hara').
-
 -behaviour(supervisor).
 
 %% API
 -export([start_link/5, start_link/6,
          stop/1]).
 
+-include("leo_pod.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 %% Supervisor callbacks
 -export([init/1]).
 
+-record(params, {
+          num_of_workers = 1 :: pos_integer(),
+          max_overflow = 1 :: pos_integer(),
+          worker_mod :: module(),
+          worker_args :: [any()],
+          init_fun :: function()
+         }).
+
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
--spec(start_link(atom(), non_neg_integer(),
-                 non_neg_integer(), module(), [any()]) ->
-             {ok, pid()} | ignore | {error, any()}).
-start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs) ->
+-spec(start_link(Id, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs) ->
+             {ok, WorkerPid::pid()} | ignore | {error, any()} when
+      Id::atom(), NumOfWorkers::non_neg_integer(),
+      MaxOverflow::non_neg_integer(), WorkerMod::module(), WorkerArgs::[any()]).
+start_link(Id, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs) ->
     Fun = fun(_) -> ok end,
-    start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, Fun).
+    start_link(Id, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, Fun).
 
--spec(start_link(atom(), non_neg_integer(),
-                 non_neg_integer(), module(), [any()], undefined|function()) ->
-             {ok, pid()} | ignore | {error, any()}).
-start_link(Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+
+-spec(start_link(Id, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+             {ok, WorkerPid::pid()} | ignore | {error, any()} when
+      Id::atom(), NumOfWorkers::non_neg_integer(),
+      MaxOverflow::non_neg_integer(), WorkerMod::module(), WorkerArgs::[any()], InitFun::function()).
+start_link(Id, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+    start_link(Id, ?DEF_NUM_OF_CHILDREN, NumOfWorkers,
+               MaxOverflow, WorkerMod, WorkerArgs, InitFun).
+
+-spec(start_link(Id, NumOfChildren, NumOfWorkers,
+                 MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+             {ok, WorkerPid::pid()} | ignore | {error, any()} when
+      Id::atom(), NumOfWorkers::non_neg_integer(), NumOfChildren::pos_integer(),
+      MaxOverflow::non_neg_integer(), WorkerMod::module(), WorkerArgs::[any()], InitFun::function()).
+start_link(Id, NumOfChildren, NumOfWorkers, MaxOverflow,
+           WorkerMod, WorkerArgs, InitFun) ->
     SupRef = gen_sup_id(Id),
     supervisor:start_link({local, SupRef}, ?MODULE,
-                                [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]).
+                                [Id, NumOfChildren, NumOfWorkers,
+                                 MaxOverflow, WorkerMod, WorkerArgs, InitFun]).
 
 
 -spec(stop(atom()) ->
@@ -70,15 +91,18 @@ stop(Id) ->
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
-init([Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
-    ChildSpec = {Id,
-                 {leo_pod_manager, start_link,
-                  [Id, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun]},
-                 permanent,
-                 2000,
-                 worker,
-                 [leo_pod_manager]},
-    {ok, { {one_for_one, 5, 10}, [ChildSpec]} }.
+init([Id, NumOfChildren, NumOfWorkers,
+      MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
+    ok = application:set_env(leo_pod, 'num_of_children', NumOfChildren),
+
+    Params = #params{num_of_workers = NumOfWorkers,
+                     max_overflow = MaxOverflow,
+                     worker_mod = WorkerMod,
+                     worker_args = WorkerArgs,
+                     init_fun = InitFun
+                    },
+    {ok, ChildSpecs} = create_manager_spec(NumOfChildren, Id, Params, []),
+    {ok, { {one_for_one, 5, 10}, ChildSpecs} }.
 
 
 %% ===================================================================
@@ -92,6 +116,33 @@ gen_sup_id(PodId) when is_list(PodId)  ->
     list_to_atom(lists:append([PodId, "_sup"]));
 gen_sup_id(PodId) when is_atom(PodId)  ->
     gen_sup_id(atom_to_list(PodId)).
+
+
+%% @doc Create leo_pod_manager's spec by pod_id and child_id
+-spec(create_manager_spec(ChildId, PodId, Params, Acc) ->
+             {ok, Acc} when ChildId::non_neg_integer(),
+                            PodId::pod_id(),
+                            Params::#params{},
+                            Acc::[tuple()]).
+create_manager_spec(0,_PodId,_Params, Acc) ->
+    {ok, Acc};
+create_manager_spec(ChildId, PodId, Params, Acc) ->
+    ManagerId =  ?create_manager_id(PodId, ChildId),
+    #params{num_of_workers = NumOfWorkers,
+            max_overflow = MaxOverflow,
+            worker_mod = WorkerMod,
+            worker_args = WorkerArgs,
+            init_fun = InitFun
+           } = Params,
+    ChildSpec = {ManagerId,
+                 {leo_pod_manager, start_link,
+                  [ManagerId, NumOfWorkers, MaxOverflow,
+                   WorkerMod, WorkerArgs, InitFun]},
+                 permanent,
+                 2000,
+                 worker,
+                 [leo_pod_manager]},
+    create_manager_spec(ChildId - 1, PodId, Params, [ChildSpec|Acc]).
 
 
 %% @doc Close woker processes

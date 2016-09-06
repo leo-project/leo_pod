@@ -24,10 +24,9 @@
 %%======================================================================
 -module(leo_pod_manager).
 
--author('Yosuke Hara').
-
 -behaviour(gen_server).
 
+-include("leo_pod.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 %% API
@@ -52,12 +51,12 @@
          terminate/2,
          code_change/3]).
 
--record(state, {num_of_children = 8 :: pos_integer(),
-                max_overflow = 8    :: pos_integer(),
-                num_overflow = 8    :: non_neg_integer(),
-                worker_mod          :: atom(),
-                worker_args = []    :: list(tuple()),
-                worker_pids = []    :: list()
+-record(state, {num_of_workers = 8 :: pos_integer(),
+                max_overflow = 8 :: pos_integer(),
+                num_overflow = 8 :: non_neg_integer(),
+                worker_mod :: atom(),
+                worker_args = [] :: list(tuple()),
+                worker_pids = [] :: list()
                }).
 
 
@@ -66,50 +65,50 @@
 %% ===================================================================
 %% @doc Initialize a wooker pool
 %%
--spec(start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
-             {ok, pid()} | ignore | {error, any()} when PodName :: atom(),
-                                                        NumOfChildren :: pos_integer(),
+-spec(start_link(PodId, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+             {ok, pid()} | ignore | {error, any()} when PodId :: pod_id(),
+                                                        NumOfWorkers :: pos_integer(),
                                                         MaxOverflow :: non_neg_integer(),
                                                         WorkerMod :: module(),
                                                         WorkerArgs :: [any()],
                                                         InitFun :: function()).
-start_link(PodName, NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
-    gen_server:start_link({local, PodName}, ?MODULE,
-                          [NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
+start_link(PodId, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+    gen_server:start_link({local, PodId}, ?MODULE,
+                          [NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun], []).
 
 
 %% @doc Stop the worker pool
 %%
--spec(stop(PodName) ->
-             ok | {error, any()} when PodName :: atom()).
-stop(PodName) ->
-    gen_server:call(PodName, stop, 30000).
+-spec(stop(PodId) ->
+             ok | {error, any()} when PodId :: pod_id()).
+stop(PodId) ->
+    gen_server:call(PodId, stop, 30000).
 
 
 %% @doc Check out a worker from the worker pool
 %%
--spec(checkout(PodName) ->
-             {ok, pid()} | {error, empty} when PodName :: atom()).
-checkout(PodName) ->
-    gen_server:call(PodName, checkout).
+-spec(checkout(PodId) ->
+             {ok, pid()} | {error, empty} when PodId :: pod_id()).
+checkout(PodId) ->
+    gen_server:call(PodId, checkout).
 
 
 %% @doc Check in a worker to the woker pool
 %%
--spec(checkin(PodName, WorkerPid) ->
-             ok | {error, any()} when PodName :: atom(),
+-spec(checkin(PodId, WorkerPid) ->
+             ok | {error, any()} when PodId :: pod_id(),
                                       WorkerPid :: pid()).
-checkin(PodName, WorkerPid) ->
-    gen_server:call(PodName, {checkin, WorkerPid}).
+checkin(PodId, WorkerPid) ->
+    gen_server:call(PodId, {checkin, WorkerPid}).
 
 
 %% @doc Check in a worker to the worker pool with asynchronous
 %%
--spec(checkin_async(PodName, WorkerPid) ->
-             ok when PodName :: atom(),
+-spec(checkin_async(PodId, WorkerPid) ->
+             ok when PodId :: pod_id(),
                      WorkerPid :: pid()).
-checkin_async(PodName, WorkerPid) ->
-    gen_server:cast(PodName, {checkin_async, WorkerPid}).
+checkin_async(PodId, WorkerPid) ->
+    gen_server:cast(PodId, {checkin_async, WorkerPid}).
 
 
 %% @doc Retrieve the current status in pretty format as follows:
@@ -117,40 +116,40 @@ checkin_async(PodName, WorkerPid) ->
 %%                worker_process_count,
 %%                overflow_count }
 %% @end
--spec(status(PodName) ->
+-spec(status(PodId) ->
              {ok, {NumOfWorking, NumOfWating,
-                   NumOfRoomForOverflow}} when PodName :: atom(),
+                   NumOfRoomForOverflow}} when PodId :: pod_id(),
                                                NumOfWorking :: non_neg_integer(),
                                                NumOfWating :: non_neg_integer(),
                                                NumOfRoomForOverflow :: non_neg_integer()).
-status(PodName) ->
-    gen_server:call(PodName, status).
+status(PodId) ->
+    gen_server:call(PodId, status).
 
 
-%% @doc Retrieve a raw status of specified PodName
+%% @doc Retrieve a raw status of specified PodId
 %%
--spec(raw_status(PodName) ->
+-spec(raw_status(PodId) ->
              {ok, [tuple()]} |
-             {error, any()} when PodName :: atom()).
-raw_status(PodName) ->
-    gen_server:call(PodName, raw_status).
+             {error, any()} when PodId :: pod_id()).
+raw_status(PodId) ->
+    gen_server:call(PodId, raw_status).
 
 
-%% @doc Retrieve pids of specified PodName
+%% @doc Retrieve pids of specified PodId
 %%
--spec(pool_pids(PodName) ->
+-spec(pool_pids(PodId) ->
              {ok, [pid()]} |
-             {error, any()} when PodName :: atom()).
-pool_pids(PodName) ->
-    gen_server:call(PodName, pool_pids).
+             {error, any()} when PodId :: pod_id()).
+pool_pids(PodId) ->
+    gen_server:call(PodId, pool_pids).
 
 
-%% @doc Retrieve pids of specified PodName
+%% @doc Retrieve pids of specified PodId
 %%
--spec(close(PodName) ->
-             ok | {error, any()} when PodName :: atom()).
-close(PodName) ->
-    gen_server:call(PodName, close).
+-spec(close(PodId) ->
+             ok | {error, any()} when PodId :: pod_id()).
+close(PodId) ->
+    gen_server:call(PodId, close).
 
 
 %% ===================================================================
@@ -158,17 +157,17 @@ close(PodName) ->
 %% ===================================================================
 %% @doc gen_server callback - Module:init(Args) -> Result
 %%
-init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
+init([NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
     InitFun(self()),
 
-    case start_child(NumOfChildren, WorkerMod, WorkerArgs, []) of
+    case start_child(NumOfWorkers, WorkerMod, WorkerArgs, []) of
         {ok, Children} ->
-            {ok, #state{num_of_children = NumOfChildren,
-                        max_overflow    = MaxOverflow,
-                        num_overflow    = MaxOverflow,
-                        worker_mod      = WorkerMod,
-                        worker_args     = WorkerArgs,
-                        worker_pids     = Children}};
+            {ok, #state{num_of_workers = NumOfWorkers,
+                        max_overflow = MaxOverflow,
+                        num_overflow = MaxOverflow,
+                        worker_mod = WorkerMod,
+                        worker_args = WorkerArgs,
+                        worker_pids = Children}};
         {error, Cause} ->
             {stop, Cause}
     end.
@@ -178,13 +177,13 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
 handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
 
-handle_call(checkout, _From, #state{worker_pids  = [],
+handle_call(checkout, _From, #state{worker_pids = [],
                                     num_overflow = 0} = State) ->
     {reply, {error, empty}, State};
 
-handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
-                                    worker_args  = WorkerArgs,
-                                    worker_pids  = [],
+handle_call(checkout, _From, #state{worker_mod = WorkerMod,
+                                    worker_args = WorkerArgs,
+                                    worker_pids = [],
                                     num_overflow = NumOverflow} = State) ->
     {Res, NewState} =
         case start_child(WorkerMod, WorkerArgs) of
@@ -196,14 +195,14 @@ handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
         end,
     {reply, Res, NewState};
 
-handle_call(checkout, _From, #state{worker_pids  = Children} = State) ->
+handle_call(checkout, _From, #state{worker_pids = Children} = State) ->
     [WorkerPid|NewChildren] = Children,
     {reply, {ok, WorkerPid}, State#state{worker_pids = NewChildren}};
 
-handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
+handle_call({checkin, WorkerPid}, _From, #state{num_of_workers = NumOfWorkers,
                                                 num_overflow = NumOverflow,
                                                 worker_pids = Children} = State) ->
-    case length(Children) >= NumOfChildren of
+    case length(Children) >= NumOfWorkers of
         true ->
             {reply, ok, State#state{num_overflow = NumOverflow + 1}};
         false ->
@@ -211,16 +210,16 @@ handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
             {reply, ok, State#state{worker_pids = NewChildren}}
     end;
 
-handle_call(status, _From, #state{num_of_children = NumOfChildren,
+handle_call(status, _From, #state{num_of_workers = NumOfWorkers,
                                   max_overflow = MaxOverflow,
                                   num_overflow = NumOverflow,
                                   worker_pids = Children} = State) ->
     case length(Children) of
         0 ->
-            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow,
+            {reply, {ok, {NumOfWorkers + MaxOverflow - NumOverflow,
                           0, NumOverflow}}, State};
         N ->
-            {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State}
+            {reply, {ok, {NumOfWorkers - N, N, MaxOverflow}}, State}
     end;
 
 handle_call(raw_status, _From, State) ->
@@ -235,10 +234,10 @@ handle_call(close, _From, State) ->
 
 %% @doc gen_server callback - Module:handle_cast(Request, State) -> Result
 %%
-handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
+handle_cast({checkin_async, WorkerPid}, #state{num_of_workers = NumOfWorkers,
                                                num_overflow = NumOverflow,
                                                worker_pids = Children} = State) ->
-    case length(Children) >= NumOfChildren of
+    case length(Children) >= NumOfWorkers of
         true ->
             {noreply, State#state{num_overflow = NumOverflow + 1}};
         false ->
@@ -252,7 +251,7 @@ handle_cast(_, State) ->
 
 %% @doc gen_server callback - Module:handle_info(Info, State) -> Result
 %%
-handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod  = WorkerMod,
+handle_info({'DOWN', MonitorRef, _Type, Pid, _Info}, #state{worker_mod = WorkerMod,
                                                             worker_args = WorkerArgs,
                                                             worker_pids = ChildPids} = State) ->
     true = erlang:demonitor(MonitorRef),
@@ -331,4 +330,3 @@ start_child(Index, WorkerMod, WorkerArgs, Children) ->
         {error, Cause} ->
             {error, Cause}
     end.
-

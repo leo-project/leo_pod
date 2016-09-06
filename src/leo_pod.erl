@@ -24,8 +24,6 @@
 %%======================================================================
 -module(leo_pod).
 
--author('Yosuke Hara').
-
 %% API
 -export([start_link/6,
          stop/1,
@@ -35,64 +33,75 @@
          status/1
         ]).
 
+-include("leo_pod.hrl").
+-include_lib("eunit/include/eunit.hrl").
+
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 %% @doc Initialize a work pool.
 %%
--spec(start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
-             {'ok', pid()} when PodName :: atom(),
-                                PodSize :: non_neg_integer(),
+-spec(start_link(PodId, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+             {'ok', pid()} when PodId :: pod_id(),
+                                NumOfWorkers :: non_neg_integer(),
                                 MaxOverflow :: non_neg_integer(),
                                 WorkerMod :: module(),
                                 WorkerArgs :: [any()],
                                 InitFun :: function()).
-start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
-    leo_pod_sup:start_link(PodName, PodSize, MaxOverflow, WorkerMod, WorkerArgs, InitFun).
+start_link(PodId, NumOfWorkers, MaxOverflow, WorkerMod, WorkerArgs, InitFun) ->
+    leo_pod_sup:start_link(PodId, NumOfWorkers, MaxOverflow,
+                           WorkerMod, WorkerArgs, InitFun).
 
 
 %% @doc Stop the worker pool.
 %%
--spec(stop(PodName) ->
-             'true' | 'not_started' when PodName :: atom()).
-stop(PodName) ->
-    leo_pod_sup:stop(PodName).
+-spec(stop(PodId) ->
+             'true' | 'not_started' when PodId :: pod_id()).
+stop(PodId) ->
+    leo_pod_sup:stop(PodId).
 
 
 %% @doc Checkout a worker from the worker pool.
 %%
--spec(checkout(PodName) ->
-             {ok, pid()} when PodName :: atom()).
-checkout(PodName) ->
-    leo_pod_manager:checkout(PodName).
+-spec(checkout(PodId) ->
+             {ok, pid()} when PodId :: pod_id()).
+checkout(PodId) ->
+    NumOfChildren = application:get_env(
+                      leo_pod, 'num_of_children', ?DEF_NUM_OF_CHILDREN),
+    PodManagerId = ?get_manager_id(PodId, NumOfChildren),
+    case leo_pod_manager:checkout(PodManagerId) of
+        {ok, WorkerPid} ->
+            {ok, {PodManagerId, WorkerPid}};
+        Other ->
+            Other
+    end.
 
 
 %% @doc Checkin the worker into the worker pool.
 %%
--spec(checkin(PodName, Worker) ->
-             ok when PodName :: atom(),
+-spec(checkin(PodManagerId, Worker) ->
+             ok when PodManagerId :: pod_id(),
                      Worker  :: pid()).
-checkin(PodName, Worker) ->
-    leo_pod_manager:checkin(PodName, Worker).
+checkin(PodManagerId, Worker) ->
+    leo_pod_manager:checkin(PodManagerId, Worker).
 
 
 %% @doc Checkin the worker into the worker pool assynchronously.
 %%
--spec(checkin_async(PodName, Worker) ->
-             ok when PodName :: atom(),
+-spec(checkin_async(PodManagerId, Worker) ->
+             ok when PodManagerId :: pod_id(),
                      Worker  :: pid()).
-checkin_async(PodName, Worker) ->
-    leo_pod_manager:checkin_async(PodName, Worker).
+checkin_async(PodManagerId, Worker) ->
+    leo_pod_manager:checkin_async(PodManagerId, Worker).
 
 %% @doc Get the status of the worker pool.
 %%      It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
-%% @end
--spec(status(PodName) ->
+-spec(status(PodId) ->
              {ok, {NumOfWorking, NumOfWating,
-                   NumOfRoomForOverflow}} when PodName :: atom(),
+                   NumOfRoomForOverflow}} when PodId :: pod_id(),
                                                NumOfWorking :: non_neg_integer(),
                                                NumOfWating  :: non_neg_integer(),
                                                NumOfRoomForOverflow :: non_neg_integer()).
-status(PodName) ->
-    leo_pod_manager:status(PodName).
+status(PodId) ->
+    leo_pod_manager:status(PodId).
