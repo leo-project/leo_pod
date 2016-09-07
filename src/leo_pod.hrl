@@ -33,6 +33,68 @@
         application:get_env(
           leo_pod, 'num_of_children', ?DEF_NUM_OF_CHILDREN)).
 
+-define(new_pod_params_tbl(_PodId),
+        begin
+            case ets:info(_PodId) of
+                undefined ->
+                    case catch ets:new(_PodId, [set, protected,
+                                                named_table,
+                                                {read_concurrency, true}]) of
+                        _PodId ->
+                            ok;
+                        {'EXIT', Cause} ->
+                            {error, Cause}
+                    end;
+                _ ->
+                    ok
+            end
+        end).
+
+-define(delete_pod_params_tbl(_PodId),
+        begin
+            case ets:info(_PodId) of
+                undefined ->
+                    ok;
+                _ ->
+                    case catch  ets:delete(_PodId) of
+                        {'EXIT', Cause} ->
+                            {error, Cause};
+                        true ->
+                            ok
+                    end
+            end
+        end).
+
+-define(get_pod_params(_PodId),
+        begin
+            case ets:info(_PodId) of
+                undefined ->
+                    not_found;
+                _ ->
+                    case ets:lookup(_PodId, 'config') of
+                        [] ->
+                            not_found;
+                        [{_,_Conf}|_] ->
+                            _Conf
+                    end
+            end
+        end).
+
+-define(put_pod_params(_PodId,_Params),
+        begin
+            case ets:info(_PodId) of
+                undefined ->
+                    not_exists_table;
+                _ ->
+                    case catch  ets:insert(_PodId, 'config',_Params) of
+                        {'EXIT', Cause} ->
+                            {error, Cause};
+                        true ->
+                            ok
+                    end
+            end
+        end).
+
 -define(create_manager_id(_PodId,_ChildId),
         begin
             list_to_atom(
