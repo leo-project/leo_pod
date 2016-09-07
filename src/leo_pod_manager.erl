@@ -51,9 +51,9 @@
          terminate/2,
          code_change/3]).
 
--record(state, {num_of_workers = 8 :: pos_integer(),
-                max_overflow = 8 :: pos_integer(),
-                num_overflow = 8 :: non_neg_integer(),
+-record(state, {num_of_workers = 1 :: pos_integer(),
+                max_overflow = 1 :: pos_integer(),
+                num_overflow = 0 :: non_neg_integer(),
                 worker_mod :: atom(),
                 worker_args = [] :: list(tuple()),
                 worker_pids = [] :: list()
@@ -117,11 +117,8 @@ checkin_async(PodId, WorkerPid) ->
 %%                overflow_count }
 %% @end
 -spec(status(PodId) ->
-             {ok, {NumOfWorking, NumOfWating,
-                   NumOfRoomForOverflow}} when PodId :: pod_id(),
-                                               NumOfWorking :: non_neg_integer(),
-                                               NumOfWating :: non_neg_integer(),
-                                               NumOfRoomForOverflow :: non_neg_integer()).
+             {ok, PodState} when PodId::pod_id(),
+                                 PodState::#pod_state{}).
 status(PodId) ->
     gen_server:call(PodId, status).
 
@@ -216,10 +213,14 @@ handle_call(status, _From, #state{num_of_workers = NumOfWorkers,
                                   worker_pids = Children} = State) ->
     case length(Children) of
         0 ->
-            {reply, {ok, {NumOfWorkers + MaxOverflow - NumOverflow,
-                          0, NumOverflow}}, State};
+            {reply, {ok, #pod_state{num_of_working_refs =
+                                        NumOfWorkers + MaxOverflow - NumOverflow,
+                                    num_of_waiting_refs = 0,
+                                    num_of_buffers = NumOverflow}}, State};
         N ->
-            {reply, {ok, {NumOfWorkers - N, N, MaxOverflow}}, State}
+            {reply, {ok, #pod_state{num_of_working_refs = NumOfWorkers - N,
+                                    num_of_waiting_refs = N,
+                                    num_of_buffers = MaxOverflow}}, State}
     end;
 
 handle_call(raw_status, _From, State) ->

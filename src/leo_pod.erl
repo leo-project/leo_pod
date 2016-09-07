@@ -67,9 +67,7 @@ stop(PodId) ->
 -spec(checkout(PodId) ->
              {ok, pid()} when PodId :: pod_id()).
 checkout(PodId) ->
-    NumOfChildren = application:get_env(
-                      leo_pod, 'num_of_children', ?DEF_NUM_OF_CHILDREN),
-    PodManagerId = ?get_manager_id(PodId, NumOfChildren),
+    PodManagerId = ?get_manager_id(PodId, ?env_num_of_children()),
     case leo_pod_manager:checkout(PodManagerId) of
         {ok, WorkerPid} ->
             {ok, {PodManagerId, WorkerPid}};
@@ -98,10 +96,24 @@ checkin_async(PodManagerId, Worker) ->
 %% @doc Get the status of the worker pool.
 %%      It returns the tuple of the numbers of working_processes, waiting processes, and room of overflow.
 -spec(status(PodId) ->
-             {ok, {NumOfWorking, NumOfWating,
-                   NumOfRoomForOverflow}} when PodId :: pod_id(),
-                                               NumOfWorking :: non_neg_integer(),
-                                               NumOfWating  :: non_neg_integer(),
-                                               NumOfRoomForOverflow :: non_neg_integer()).
+             {ok, [PodState]} when PodId::pod_id(),
+                                   PodState::tuple()).
 status(PodId) ->
-    leo_pod_manager:status(PodId).
+    NumOfChildren = ?env_num_of_children(),
+    status_1(NumOfChildren, PodId, []).
+
+%% @private
+status_1(0,_, Acc) ->
+    {ok, Acc};
+status_1(ChildId, PodId, Acc) ->
+    ManagerPodId = ?create_manager_id(PodId, ChildId),
+    case catch leo_pod_manager:status(ManagerPodId) of
+        {ok, PodStatus} ->
+            PodStatus_1 =
+                lists:zip(record_info(fields, pod_state),tl(tuple_to_list(PodStatus))),
+            status_1(ChildId - 1, PodId, [{ManagerPodId, PodStatus_1}|Acc]);
+        {_, Cause} ->
+            %% @TODO - output a error message(warn)
+            ?debugVal(Cause),
+            status_1(ChildId - 1, PodId, Acc)
+    end.

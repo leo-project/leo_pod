@@ -64,6 +64,8 @@ suite_(_) ->
 
     %% @TODO
     %% ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodId)),
+    _PodState_1 = leo_pod:status(PodId),
+    ?debugVal(_PodState_1),
 
     %% @TODO
     %% stop a target child proc
@@ -124,15 +126,13 @@ execute_1(Index, Name, Fun) ->
 execute_2(0,_Name,_Fun) ->
     ok;
 execute_2(Index, Name, Fun) ->
-    spawn(fun() ->
-                  {ok, {PodManagerId, Worker}} = leo_pod:checkout(Name),
+    {ok, {PodManagerId, Worker}} = leo_pod:checkout(Name),
 
-                  Msg1 = lists:append(["index_", integer_to_list(Index)]),
-                  {ok, Msg2} = gen_server:call(Worker, {Fun, Msg1}),
-                  ?assertEqual(Msg1, Msg2),
+    Msg1 = lists:append(["index_", integer_to_list(Index)]),
+    {ok, Msg2} = gen_server:call(Worker, {Fun, Msg1}),
+    ?assertEqual(Msg1, Msg2),
 
-                  ok = leo_pod:checkin(PodManagerId, Worker)
-          end),
+    ok = leo_pod:checkin(PodManagerId, Worker),
     execute_2(Index - 1, Name, Fun).
 
 -endif.

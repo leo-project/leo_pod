@@ -24,6 +24,15 @@
 -type(pod_id() :: atom()).
 
 
+-record(pod_state, {num_of_working_refs = 0 :: non_neg_integer(),
+                    num_of_waiting_refs = 0 :: non_neg_integer(),
+                    num_of_buffers = 0 :: non_neg_integer()
+                   }).
+
+-define(env_num_of_children(),
+        application:get_env(
+          leo_pod, 'num_of_children', ?DEF_NUM_OF_CHILDREN)).
+
 -define(create_manager_id(_PodId,_ChildId),
         begin
             list_to_atom(
