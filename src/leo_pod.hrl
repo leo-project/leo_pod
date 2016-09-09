@@ -95,6 +95,16 @@
             end
         end).
 
+-define(get_num_of_workers_per_child(_NumOfWorkers,_NumOfChildren),
+        begin
+            case erlang:round(_NumOfWorkers/_NumOfChildren) of
+                0 ->
+                    1;
+                V ->
+                    V
+            end
+        end).
+
 -define(create_manager_id(_PodId,_ChildId),
         begin
             list_to_atom(

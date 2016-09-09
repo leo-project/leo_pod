@@ -95,7 +95,8 @@ init([Id, NumOfChildren, NumOfWorkers,
       MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
     ok = application:set_env(leo_pod, 'num_of_children', NumOfChildren),
 
-    Params = #params{num_of_workers = NumOfWorkers,
+    NumOfWorkers_1 = ?get_num_of_workers_per_child(NumOfWorkers, NumOfChildren),
+    Params = #params{num_of_workers = NumOfWorkers_1,
                      max_overflow = MaxOverflow,
                      worker_mod = WorkerMod,
                      worker_args = WorkerArgs,

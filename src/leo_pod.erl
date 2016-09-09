@@ -112,8 +112,7 @@ status_1(ChildId, PodId, Acc) ->
             PodStatus_1 =
                 lists:zip(record_info(fields, pod_state),tl(tuple_to_list(PodStatus))),
             status_1(ChildId - 1, PodId, [{ManagerPodId, PodStatus_1}|Acc]);
-        {_, Cause} ->
+        {_,_Cause} ->
             %% @TODO - output a error message(warn)
-            ?debugVal(Cause),
             status_1(ChildId - 1, PodId, Acc)
     end.
