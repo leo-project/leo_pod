@@ -205,6 +205,7 @@ handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
                                                 worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
+            true = erlang:exit(WorkerPid, kill),
             {reply, ok, State#state{num_overflow = NumOverflow + 1}};
         false ->
             NewChildren = [WorkerPid|Children],
@@ -240,6 +241,7 @@ handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
                                                worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
+            true = erlang:exit(WorkerPid, kill),
             {noreply, State#state{num_overflow = NumOverflow + 1}};
         false ->
             NewChildren = [WorkerPid|Children],
@@ -331,4 +333,3 @@ start_child(Index, WorkerMod, WorkerArgs, Children) ->
         {error, Cause} ->
             {error, Cause}
     end.
-
