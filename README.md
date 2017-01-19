@@ -1,8 +1,8 @@
 # leo_pod -  A Fast Erlang worker pool manager
 
-**leo_pod** is an Erlang worker pool manager.
-It is implemented no to use ETS (Erlang Term Storage).
-This is because we met a problem of ETS when we run it on high spec machines.
+[![Build Status](https://travis-ci.org/leo-project/leo_pod.svg?branch=develop)](https://travis-ci.org/leo-project/leo_pod)
+
+**leo_pod** is an Erlang worker pool manager, which does not use ETS(Eralng Term Storage).
 
 ## Usage
 
