@@ -72,10 +72,10 @@ suite_(_) ->
     %% Execute-2 - [checkout > exec > checkin]
     ok = execute_2(PodSize + 2, PodName, slow_echo),
     timer:sleep(100),
-    ?assertEqual({ok, {PodSize + 2, 0, MaxOverflow - 2}}, leo_pod:status(PodName)),
+    ?assertEqual({ok, {PodSize + 2, 0, 2}}, leo_pod:status(PodName)),
     timer:sleep(600),
-    ?debugVal(leo_pod:status(PodName)),
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
+    [?debugVal(P) || P <- erlang:processes()],
 
     %% Prepare-2
     PodName_1 = 'test_worker_pod_1',
@@ -96,6 +96,8 @@ suite_(_) ->
     ok = execute_2(PodSize + 2, PodName_1, slow_echo),
     timer:sleep(timer:seconds(1)),
     ?debugVal(leo_pod:status(PodName_1)),
+
+    [?debugVal(P) || P <- erlang:processes()],
 
     %% Termination
     leo_pod:stop(PodName),

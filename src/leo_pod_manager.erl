@@ -61,6 +61,15 @@
                }).
 
 
+-define(new_num_overflow(_CurNumOverflow),
+        case _CurNumOverflow < 1 of
+            true ->
+                0;
+            false ->
+                _CurNumOverflow - 1
+        end).
+
+
 %% ===================================================================
 %% API functions
 %% ===================================================================
@@ -165,7 +174,7 @@ init([NumOfChildren, MaxOverflow, WorkerMod, WorkerArgs, InitFun]) ->
         {ok, Children} ->
             {ok, #state{num_of_children = NumOfChildren,
                         max_overflow    = MaxOverflow,
-                        num_overflow    = MaxOverflow,
+                        num_overflow    = 0,
                         worker_mod      = WorkerMod,
                         worker_args     = WorkerArgs,
                         worker_pids     = Children}};
@@ -179,7 +188,8 @@ handle_call(stop,_From,State) ->
     {stop, normal, ok, State};
 
 handle_call(checkout, _From, #state{worker_pids  = [],
-                                    num_overflow = 0} = State) ->
+                                    max_overflow = MaxOverflow,
+                                    num_overflow = NumOverflow} = State) when MaxOverflow =< NumOverflow ->
     {reply, {error, empty}, State};
 
 handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
@@ -190,7 +200,7 @@ handle_call(checkout, _From, #state{worker_mod   = WorkerMod,
         case start_child(WorkerMod, WorkerArgs) of
             {ok, ChildPid} ->
                 {{ok, ChildPid},
-                 State#state{num_overflow = NumOverflow - 1}};
+                 State#state{num_overflow = NumOverflow + 1}};
             {error, _Cause} ->
                 {{error, empty}, State}
         end,
@@ -205,8 +215,9 @@ handle_call({checkin, WorkerPid}, _From, #state{num_of_children = NumOfChildren,
                                                 worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
+            %% ?debugVal(WorkerPid),
             true = erlang:exit(WorkerPid, kill),
-            {reply, ok, State#state{num_overflow = NumOverflow + 1}};
+            {reply, ok, State#state{num_overflow = ?new_num_overflow(NumOverflow)}};
         false ->
             NewChildren = [WorkerPid|Children],
             {reply, ok, State#state{worker_pids = NewChildren}}
@@ -218,8 +229,7 @@ handle_call(status, _From, #state{num_of_children = NumOfChildren,
                                   worker_pids = Children} = State) ->
     case length(Children) of
         0 ->
-            {reply, {ok, {NumOfChildren + MaxOverflow - NumOverflow,
-                          0, NumOverflow}}, State};
+            {reply, {ok, {NumOfChildren + NumOverflow, 0, NumOverflow}}, State};
         N ->
             {reply, {ok, {NumOfChildren - N, N, MaxOverflow}}, State}
     end;
@@ -241,8 +251,9 @@ handle_cast({checkin_async, WorkerPid}, #state{num_of_children = NumOfChildren,
                                                worker_pids = Children} = State) ->
     case length(Children) >= NumOfChildren of
         true ->
+            %% ?debugVal(WorkerPid),
             true = erlang:exit(WorkerPid, kill),
-            {noreply, State#state{num_overflow = NumOverflow + 1}};
+            {noreply, State#state{num_overflow = ?new_num_overflow(NumOverflow)}};
         false ->
             NewChildren = [WorkerPid|Children],
             {noreply, State#state{worker_pids = NewChildren}}
