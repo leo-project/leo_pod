@@ -64,6 +64,7 @@ init([WorkerArgs]) ->
     {ok, WorkerArgs}.
 
 handle_call(stop,_From, State) ->
+    ?debugVal({stop,_From}),
     {stop, normal, ok, State};
 
 handle_call({echo, Msg},_From, State) ->

@@ -44,15 +44,16 @@ teardown(_) ->
 suite_(_) ->
     %% Prepare-1
     PodName = 'test_worker_pod',
-    PodSize     = 8,
+    PodSize = 8,
     MaxOverflow = 16,
-    ModName     = 'leo_pod_mod',
-    WorkerArgs  = [{protocol, tcp},
-                   {host, "127.0.0.1"},
-                   {port, 8080}],
+    ModName = 'leo_pod_mod',
+    %% WorkerArgs = [{protocol, tcp},
+    %%                {host, "127.0.0.1"},
+    %%                {port, 8080}],
+    WorkerArgs  = [],
     InitFun = fun(_ManagerRef) ->
-            void
-    end,
+                      void
+              end,
     leo_pod:start_link(PodName, PodSize, MaxOverflow, ModName, WorkerArgs, InitFun),
 
     %% Confirm procs #1
@@ -71,36 +72,43 @@ suite_(_) ->
     %% Execute-2 - [checkout > exec > checkin]
     ok = execute_2(PodSize + 2, PodName, slow_echo),
     timer:sleep(100),
-    ?assertEqual({ok, {PodSize + 2, 0, MaxOverflow - 2}}, leo_pod:status(PodName)),
-    timer:sleep(300),
+    ?assertEqual({ok, {PodSize + 2, 0, 2}}, leo_pod:status(PodName)),
+    timer:sleep(600),
     ?assertEqual({ok, {0, PodSize, MaxOverflow}}, leo_pod:status(PodName)),
+    [?debugVal(P) || P <- erlang:processes()],
 
     %% Prepare-2
-    PodName1 = 'test_worker_pod_1',
-    PodSize1     = 4,
-    MaxOverflow1 = 8,
-    ModName1     = 'leo_pod_mod',
-    WorkerArgs1  = [{protocol, tcp},
-                    {host, "127.0.0.1"},
-                    {port, 8080}],
-    leo_pod:start_link(PodName1, PodSize1, MaxOverflow1, ModName1, WorkerArgs1, InitFun),
+    PodName_1 = 'test_worker_pod_1',
+    PodSize_1 = 2,
+    MaxOverflow_1 = 2,
+    ModName_1 = 'leo_pod_mod',
+    WorkerArgs_1 = [],
+    leo_pod:start_link(PodName_1, PodSize_1, MaxOverflow_1, ModName_1, WorkerArgs_1, InitFun),
 
     %% Confirm procs #2
-    ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
+    ?assertEqual({ok, {0, PodSize_1, MaxOverflow_1}}, leo_pod:status(PodName_1)),
 
     %% Execute-4 - [checkout > exec > checkin]
-    ok = execute_1(16, PodName1, echo),
-    ?assertEqual({ok, {0, PodSize1, MaxOverflow1}}, leo_pod:status(PodName1)),
+    ok = execute_1(16, PodName_1, echo),
+    ?assertEqual({ok, {0, PodSize_1, MaxOverflow_1}}, leo_pod:status(PodName_1)),
+
+    %% Execute-2 - [checkout > exec > checkin]
+    ok = execute_2(PodSize + 2, PodName_1, slow_echo),
+    timer:sleep(timer:seconds(1)),
+    ?debugVal(leo_pod:status(PodName_1)),
+
+    [?debugVal(P) || P <- erlang:processes()],
 
     %% Termination
     leo_pod:stop(PodName),
-    leo_pod:stop(PodName1),
+    leo_pod:stop(PodName_1),
     ok.
 
 
 %% ===================================================================
 %% Internal Functions
 %% ===================================================================
+%% @private
 execute_1(0,_Name,_Fun) ->
     ok;
 execute_1(Index, Name, Fun) ->
@@ -113,18 +121,34 @@ execute_1(Index, Name, Fun) ->
     ok = leo_pod:checkin_async(Name, Worker),
     execute_1(Index - 1, Name, Fun).
 
+%% @private
 execute_2(0,_Name,_Fun) ->
     ok;
 execute_2(Index, Name, Fun) ->
     spawn(fun() ->
-                  {ok, Worker} = leo_pod:checkout(Name),
-
-                  Msg1 = lists:append(["index_", integer_to_list(Index)]),
-                  {ok, Msg2} = gen_server:call(Worker, {Fun, Msg1}),
-                  ?assertEqual(Msg1, Msg2),
-
-                  ok = leo_pod:checkin(Name, Worker)
+                  checkout(Index, Name, Fun, 0)
           end),
     execute_2(Index - 1, Name, Fun).
+
+%% @private
+checkout(Index, PodName, Fun, Times) ->
+    case leo_pod:checkout(PodName) of
+        {ok, Worker} ->
+            Msg1 = lists:append(["index_", integer_to_list(Index)]),
+            {ok, Msg2} = gen_server:call(Worker, {Fun, Msg1}),
+            case Times > 0 of
+                true ->
+                    ?debugVal({Index, {Worker, Msg2}, Times});
+                false ->
+                    void
+            end,
+            ?assertEqual(Msg1, Msg2),
+
+            ok = leo_pod:checkin(PodName, Worker);
+        {error,_Cause} ->
+            ?debugVal({Index, _Cause, Times}),
+            timer:sleep(100),
+            checkout(Index, PodName, Fun, Times + 1)
+    end.
 
 -endif.
